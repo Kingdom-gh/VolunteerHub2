@@ -60,7 +60,7 @@ const MyVolunteerRequest = ({title}) => {
               });
             }
             const remaining = myVolunteerRequest.filter(
-              (post) => post._id !== id
+              (post) => post.id !== id
             );
             setMyVolunteerRequest(remaining);
             navigate(`/manage-my-post`);
@@ -99,9 +99,9 @@ const MyVolunteerRequest = ({title}) => {
                 <tbody>
                   {/* row 1 */}
                   {myVolunteerRequest.map((post, idx) => (
-                    <tr className="border border-gray-300" key={post._id}>
+                    <tr className="border border-gray-300" key={post.id}>
                       <th className="font-semibold">{idx + 1}</th>
-                      <td className="font-semibold">{post.post_title}</td>
+                      <td className="font-semibold">{post.postTitle}</td>
                       <td className="font-semibold">{post.category}</td>
                       <td className="font-semibold">{post.deadline}</td>
                       <td className="font-semibold">{post.location}</td>
@@ -110,7 +110,7 @@ const MyVolunteerRequest = ({title}) => {
                         <div className="flex items-center gap-6">
                           <GiCancel
                             title="Cancel Request"
-                            onClick={() => handleCancel(post._id)}
+                            onClick={() => handleCancel(post.id)}
                             className="size-6 cursor-pointer"
                           />
                         </div>
@@ -135,14 +135,14 @@ const MyVolunteerRequest = ({title}) => {
                 <tbody>
                   {/* row 1 */}
                   {myVolunteerRequest.map((post) => (
-                    <tr className="border border-gray-300" key={post._id}>
-                      <td>{post.post_title}</td>
+                    <tr className="border border-gray-300" key={post.id}>
+                      <td>{post.postTitle}</td>
                       <td>{post.deadline}</td>
                       <td>
                         <div className="flex items-center gap-6">
                           <GiCancel
                             title="Cancel Request"
-                            onClick={() => handleCancel(post._id)}
+                            onClick={() => handleCancel(post.id)}
                             className="size-6 cursor-pointer"
                           />
                         </div>

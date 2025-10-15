@@ -9,7 +9,7 @@ import axios from "axios";
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 const Register = ({ title }) => {
-  const { user,registerAccount, updateUserProfile } = UseAuth();
+  const { user, registerAccount, updateUserProfile } = UseAuth();
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit } = useForm();
   const navigate = useNavigate();
@@ -32,26 +32,49 @@ const Register = ({ title }) => {
       );
       return;
     }
-    try {
-      const result = await registerAccount(email, password);
-      console.log(result);
-      await updateUserProfile(name, email, photo);
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/jwt`,
-        {
-          email: result?.user?.email,
-        },
-        { withCredentials: true }
-      );
-      console.log(data);
-      toast.success("Account created Successfully");
-      navigate(location?.state || "/");
-    } catch (err) {
-      console.log(err);
-      toast.error("Email Already In use !");
-    }
+
+      try {
+        // BƯỚC 1: Đăng ký tài khoản trên dịch vụ Auth
+        const result = await registerAccount(email, password);
+
+        // BƯỚC 2: Cập nhật profile (nếu BƯỚC 1 thành công)
+        await updateUserProfile(name, email, photo);
+
+        // BƯỚC 3: Lấy JWT từ Spring Boot Backend
+        try {
+          const { data } = await axios.post(
+            `${import.meta.env.VITE_API_URL}/jwt`,
+            { email: result?.user?.email },
+            { withCredentials: true }
+          );
+          console.log(data);
+          toast.success("Account created Successfully");
+          navigate(location?.state || "/");
+
+        } catch (jwtError) {
+          // Lỗi khi gọi API JWT (Backend)
+          console.error("JWT API Error:", jwtError);
+          toast.error("Account created, but failed to log in. Please log in manually.");
+          // Vẫn nên điều hướng để người dùng thử login
+          navigate("/login");
+        }
+
+      } catch (authError) {
+        // Lỗi từ registerAccount hoặc updateUserProfile
+        console.error("Auth Service Error:", authError);
+
+        // Xử lý lỗi cụ thể (ví dụ: Firebase auth/email-already-in-use)
+        if (authError?.code === 'auth/email-already-in-use') {
+          toast.error("The email address is already in use by another account.");
+        } else if (authError?.code === 'auth/invalid-email') {
+          toast.error("Invalid email format.");
+        } else {
+          toast.error(authError?.message || "Registration failed due to an unexpected error.");
+        }
+      }
+    
   };
-  if ( user) return;
+  if (user) return;
   return (
     <div data-aos="fade-down" data-aos-easing="linear" data-aos-duration="1500" className="">
       <Helmet>

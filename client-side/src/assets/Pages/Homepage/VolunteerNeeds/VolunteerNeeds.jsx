@@ -37,7 +37,7 @@ const VolunteerNeeds = () => {
         {volunteers.map((volunteer) => (
           <VolunteerNeedsCard
             volunteer={volunteer}
-            key={volunteer._id}
+            key={volunteer.id}
           ></VolunteerNeedsCard>
         ))}
       </div>

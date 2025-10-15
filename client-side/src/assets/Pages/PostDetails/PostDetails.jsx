@@ -11,15 +11,16 @@ const PostDetails = ({title}) => {
   const { user } = UseAuth();
   const navigate = useNavigate();
   const {
-    _id,
-    post_title,
+    id,
+    postTitle,
     category,
     location,
     thumbnail,
     noOfVolunteer,
     deadline,
     description,
-    organizationInformation: { orgEmail, orgName },
+     orgEmail,
+    orgName
   } = post;
   const handleVolunteer = () => {
     console.log("I want to be a volunteer !");
@@ -31,7 +32,7 @@ const PostDetails = ({title}) => {
     if (user?.email == orgEmail) {
       return toast.error("You can't be a volunteer for this post !");
     } else {
-      navigate(`/be-a-volunteer/${_id}`);
+      navigate(`/be-a-volunteer/${id}`);
     }
   };
   return (
@@ -51,7 +52,7 @@ const PostDetails = ({title}) => {
           />
           <div className="space-y-6">
             <Typography className="mb-4" variant="h2">
-              {post_title}
+              {postTitle}
             </Typography>
             <Typography variant="h4">
               Category :{" "}

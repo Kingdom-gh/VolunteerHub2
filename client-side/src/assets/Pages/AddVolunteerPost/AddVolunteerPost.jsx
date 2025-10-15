@@ -17,7 +17,7 @@ const AddVolunteerPost = ({ title }) => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const post_title = form.postTitle.value;
+    const postTitle = form.postTitle.value;
     const category = form.category.value;
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
@@ -27,17 +27,16 @@ const AddVolunteerPost = ({ title }) => {
     const orgEmail = form.orgEmail.value;
     const description = form.description.value;
     const newVolunteerPost = {
-      post_title,
+      postTitle,
       category,
       location,
       thumbnail,
       noOfVolunteer,
       deadline,
       description,
-      organizationInformation: {
-        orgEmail,
-        orgName,
-      },
+      orgEmail,
+      orgName,
+      
     };
 
     try {

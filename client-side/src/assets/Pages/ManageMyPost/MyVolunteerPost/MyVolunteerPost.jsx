@@ -58,7 +58,7 @@ const MyVolunteerPost = ({title}) => {
                 icon: "success",
               });
             }
-            const remaining = myVolunteerPost.filter((post) => post._id !== id);
+            const remaining = myVolunteerPost.filter((post) => post.id !== id);
             setMyVolunteerPost(remaining);
             navigate(`/manage-my-post`);
           });
@@ -99,19 +99,19 @@ const MyVolunteerPost = ({title}) => {
                 <tbody>
                   {/* row 1 */}
                   {myVolunteerPost.map((post, idx) => (
-                    <tr className="border border-gray-300" key={post._id}>
+                    <tr className="border border-gray-300" key={post.id}>
                       <th className="font-semibold">{idx + 1}</th>
-                      <td className="font-semibold">{post.post_title}</td>
+                      <td className="font-semibold">{post.postTitle}</td>
                       <td className="font-semibold">{post.category}</td>
                       <td className="font-semibold">{post.deadline}</td>
                       <td className="font-semibold">{post.location}</td>
 
                       <td>
                         <div className="flex items-center gap-6">
-                          <Link to={`/update-my-post/${post._id}`}>
+                          <Link to={`/update-my-post/${post.id}`}>
                             <MdEdit className="size-6" />
                           </Link>
-                          <button onClick={() => handleDelete(post._id)}>
+                          <button onClick={() => handleDelete(post.id)}>
                             <MdDelete className="size-6" />
                           </button>
                         </div>
@@ -137,15 +137,15 @@ const MyVolunteerPost = ({title}) => {
                   <tbody>
                     {/* row 1 */}
                     {myVolunteerPost.map((post) => (
-                      <tr className="border border-gray-300" key={post._id}>
-                        <td>{post.post_title}</td>
+                      <tr className="border border-gray-300" key={post.id}>
+                        <td>{post.postTitle}</td>
                         <td>{post.category}</td>
                         <td>
                           <div className="flex items-center gap-6">
-                            <Link to={`/update-my-post/${post._id}`}>
+                            <Link to={`/update-my-post/${post.id}`}>
                               <MdEdit className="size-6" />
                             </Link>
-                            <button onClick={() => handleDelete(post._id)}>
+                            <button onClick={() => handleDelete(post.id)}>
                               <MdDelete className="size-6" />
                             </button>
                           </div>

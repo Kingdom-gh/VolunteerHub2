@@ -10,28 +10,28 @@ import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 
 
-const BeAVolunteer = ({title}) => {
+const BeAVolunteer = ({ title }) => {
   const [startDate, setStartDate] = useState(new Date());
   console.log(startDate);
-  const navigate=useNavigate()
+  const navigate = useNavigate()
   const post = useLoaderData();
-  const{user}=UseAuth();
-  const {_id,
-    post_title,
+  const { user } = UseAuth();
+  const { id,
+    postTitle,
     category,
     location,
     thumbnail,
     noOfVolunteer,
     deadline,
     description,
-    organizationInformation: { orgEmail, orgName },
+    orgEmail, orgName,
   } = post;
 
-console.log(post);
+  console.log(post);
   const handleRequest = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const post_title = form.postTitle.value;
+    const postTitle = form.postTitle.value;
     const category = form.category.value;
     const location = form.destination.value;
     const thumbnail = form.thumbnail.value;
@@ -43,9 +43,9 @@ console.log(post);
     const volunteerEmail = form.volunteerEmail.value;
     const description = form.description.value;
     const suggestion = form.suggestion.value;
-    const status= form.status.value;
+    const status = form.status.value;
     const requestVolunteerPost = {
-      post_title,
+      postTitle,
       category,
       location,
       thumbnail,
@@ -54,31 +54,28 @@ console.log(post);
       description,
       suggestion,
       status,
-      volunteerInformation:{
-        volunteerName,
-        volunteerEmail
-      },
-      organizationInformation: {
-        orgEmail,
-        orgName,
-      }
+      volunteerName,
+      volunteerEmail,
+      orgEmail,
+      orgName,
+      postId: id
     };
-console.log(requestVolunteerPost);
-    try{
-      const{data}=await axios.post(`${import.meta.env.VITE_API_URL}/request-volunteer`,requestVolunteerPost)
+    console.log(requestVolunteerPost);
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/request-volunteer`, requestVolunteerPost)
       console.log(data);
       toast.success("Your Volunteer Request has been sent ")
       form.reset();
     }
-    catch(err){
+    catch (err) {
       console.log(err);
     }
-    try{
-      const{data}=await axios.put(`${import.meta.env.VITE_API_URL}/update-volunteer-count/${_id}`)
+    try {
+      const { data } = await axios.put(`${import.meta.env.VITE_API_URL}/update-volunteer-count/${id}`)
       console.log(data);
       navigate("/manage-my-post")
     }
-    catch(err){
+    catch (err) {
       console.log(err);
     }
   };
@@ -112,7 +109,7 @@ console.log(requestVolunteerPost);
                   placeholder="Enter your title of the post"
                   name="postTitle"
                   readOnly
-                  defaultValue={post_title}
+                  defaultValue={postTitle}
                   id="postTitle"
                   type="text"
                   className="block w-full px-4 py-2 mt-2 text-gray-700 bg-white border border-gray-200 rounded-md dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 dark:focus:border-blue-300 focus:outline-none focus:ring"
@@ -167,8 +164,8 @@ console.log(requestVolunteerPost);
                   Thumbnail
                 </label>
                 <input
-                defaultValue={thumbnail}
-                readOnly
+                  defaultValue={thumbnail}
+                  readOnly
                   id="thumbnail"
                   name="thumbnail"
                   placeholder="Enter your thumbnail link"
@@ -181,8 +178,8 @@ console.log(requestVolunteerPost);
                   No. of Volunteer Needed
                 </label>
                 <input
-                defaultValue={noOfVolunteer}
-                readOnly
+                  defaultValue={noOfVolunteer}
+                  readOnly
                   id="noOfVolunteer"
                   name="noOfVolunteer"
                   placeholder="Enter the total number of people you need"
@@ -208,7 +205,7 @@ console.log(requestVolunteerPost);
                 <input
                   id="orgName"
                   name="orgName"
-                defaultValue={orgName}
+                  defaultValue={orgName}
                   type="text"
                   readOnly
                   className="block w-full px-4 py-2 mt-2 text-gray-700 bg-white border border-gray-200 rounded-md dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 dark:focus:border-blue-300 focus:outline-none focus:ring"
@@ -219,7 +216,7 @@ console.log(requestVolunteerPost);
                   Organizer email
                 </label>
                 <input
-                
+
                   id="orgEmail"
                   name="orgEmail"
                   defaultValue={orgEmail}
@@ -236,8 +233,8 @@ console.log(requestVolunteerPost);
                   Description
                 </label>
                 <textarea
-                defaultValue={description}
-                readOnly
+                  defaultValue={description}
+                  readOnly
                   placeholder="Enter the description"
                   className="block w-full px-4 py-2 mt-2 text-gray-700 bg-white border border-gray-200 rounded-md  focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40  focus:outline-none focus:ring"
                   name="description"
@@ -251,7 +248,7 @@ console.log(requestVolunteerPost);
                 <input
                   id="volunteerName"
                   name="volunteerName"
-                defaultValue={user?.displayName}
+                  defaultValue={user?.displayName}
                   type="text"
                   readOnly
                   className="block w-full px-4 py-2 mt-2 text-gray-700 bg-white border border-gray-200 rounded-md dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40 dark:focus:border-blue-300 focus:outline-none focus:ring"
@@ -262,7 +259,7 @@ console.log(requestVolunteerPost);
                   Volunteer email
                 </label>
                 <input
-                
+
                   id="volunteerEmail"
                   name="volunteerEmail"
                   defaultValue={user?.email}
@@ -279,7 +276,7 @@ console.log(requestVolunteerPost);
                   Suggestion
                 </label>
                 <textarea
-                required
+                  required
                   placeholder="Enter your suggestion"
                   className="block w-full px-4  mt-2 text-gray-700 bg-white border border-gray-200 rounded-md  focus:border-blue-400 focus:ring-blue-300 focus:ring-opacity-40  focus:outline-none focus:ring"
                   name="suggestion"
@@ -296,7 +293,7 @@ console.log(requestVolunteerPost);
                 <select
                   name="status"
                   id="location"
-                  defaultValue={"Requested"} 
+                  defaultValue={"Requested"}
                   className="border p-2 rounded-md"
                 >
                   <option value="Requested">Requested</option>

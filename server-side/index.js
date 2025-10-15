@@ -89,7 +89,7 @@ async function run() {
     ///clear cookies
     app.post("/logout", async (req, res) => {
       const user = req.body;
-      console.log("logging out", user);
+      console.log("logging out", user); 
       res
         .clearCookie("token", { ...cookieOptions, maxAge: 0 })
         .send({ success: true });
@@ -112,7 +112,7 @@ async function run() {
       try {
         const search = req.query.search || "";
         const [rows] = await pool.query(
-          "SELECT * FROM volunteers WHERE post_title LIKE ?",
+          "SELECT * FROM volunteers WHERE postTitle LIKE ?",
           [`%${search}%`]
         );
         res.send(rows);
@@ -125,10 +125,10 @@ async function run() {
     //Posting new volunteer Post:
     app.post("/add-volunteer-post", async (req, res) => {
   try {
-    const { post_title, category, deadline, location, noOfVolunteer, orgName, orgEmail } = req.body;
+    const { postTitle, category, deadline, location, noOfVolunteer, orgName, orgEmail } = req.body;
     const [result] = await pool.query(
-      "INSERT INTO volunteers (post_title, category, deadline, location, noOfVolunteer, orgName, orgEmail) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [post_title, category, deadline, location, noOfVolunteer, orgName, orgEmail]
+      "INSERT INTO volunteers (postTitle, category, deadline, location, noOfVolunteer, orgName, orgEmail) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [postTitle, category, deadline, location, noOfVolunteer, orgName, orgEmail]
     );
     res.send({ insertedId: result.insertId });
   } catch (err) {
@@ -163,7 +163,7 @@ async function run() {
     // app.put("/update-volunteer-post/:id", async (req, res) => {
     //   const id = req.params.id;
     //   const volunteerData = req.body;
-    //   const query = { _id: new ObjectId(id) };
+    //   const query = { id: new ObjectId(id) };
     //   const options = { upsert: true };
     //   const updateVolunteerData = {
     //     $set: {
@@ -207,7 +207,7 @@ async function run() {
     // //Remove my volunteer Request:
     // app.delete("/my-volunteer-request/:id", async (req, res) => {
     //   const id = req.params.id;
-    //   const query = { _id: new ObjectId(id) };
+    //   const query = { id: new ObjectId(id) };
     //   const result = await volunteersRequestCollection.deleteOne(query);
     //   res.send(result);
     // });

@@ -15,8 +15,8 @@ const UpdateMyPost = ({ title }) => {
   const { user } = UseAuth();
   const post = useLoaderData();
   const {
-    _id,
-    post_title,
+    id,
+    postTitle,
     category,
     location,
     thumbnail,
@@ -29,7 +29,7 @@ const UpdateMyPost = ({ title }) => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const post_title = form.postTitle.value;
+    const postTitle = form.postTitle.value;
     const category = form.category.value;
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
@@ -39,22 +39,20 @@ const UpdateMyPost = ({ title }) => {
     const orgEmail = form.orgEmail.value;
     const description = form.description.value;
     const updatedVolunteerPost = {
-      post_title,
+      postTitle,
       category,
       location,
       thumbnail,
       noOfVolunteer,
       deadline,
       description,
-      organizationInformation: {
-        orgEmail,
-        orgName,
-      },
+      orgEmail,
+      orgName
     };
 
     try {
       const { data } = await axios.put(
-        `${import.meta.env.VITE_API_URL}/update-volunteer-post/${_id}`,
+        `${import.meta.env.VITE_API_URL}/update-volunteer-post/${id}`,
         updatedVolunteerPost
       );
       console.log(data);
@@ -90,7 +88,7 @@ const UpdateMyPost = ({ title }) => {
                     Post Title
                   </label>
                   <input
-                    defaultValue={post_title}
+                    defaultValue={postTitle}
                     placeholder="Enter your title of the post"
                     name="postTitle"
                     id="postTitle"

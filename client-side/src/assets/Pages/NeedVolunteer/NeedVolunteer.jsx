@@ -150,7 +150,7 @@ const NeedVolunteer = ({ title }) => {
               {volunteers.map((volunteer) => (
                 <VolunteerNeedsCard
                   volunteer={volunteer}
-                  key={volunteer._id}
+                  key={volunteer.id}
                 ></VolunteerNeedsCard>
               ))}
             </div>
@@ -176,11 +176,11 @@ const NeedVolunteer = ({ title }) => {
                     <tbody>
                       {/* row 1 */}
                       {volunteers.map((post, idx) => (
-                        <tr className="border border-gray-300" key={post._id}>
+                        <tr className="border border-gray-300" key={post.id}>
                           <th className="font-semibold">{idx + 1}</th>
-                          <td className="font-semibold">{post.post_title}</td>
+                          <td className="font-semibold">{post.postTitle}</td>
                           <td className="font-semibold">
-                            {post.organizationInformation.orgName}
+                            {post.orgName}
                           </td>
                           <td className="font-semibold">{post.category}</td>
                           <td className="font-semibold">{post.deadline}</td>
@@ -189,7 +189,7 @@ const NeedVolunteer = ({ title }) => {
                             {post.noOfVolunteer}
                           </td>
                           <td>
-                            <Link to={`/post-details/${post._id}`}>
+                            <Link to={`/post-details/${post.id}`}>
                               <Button color="green">View Details</Button>
                             </Link>
                           </td>
@@ -216,11 +216,11 @@ const NeedVolunteer = ({ title }) => {
                       <tbody>
                         {/* row 1 */}
                         {volunteers.map((post) => (
-                          <tr className="border border-gray-300" key={post._id}>
-                            <td>{post.post_title}</td>
+                          <tr className="border border-gray-300" key={post.id}>
+                            <td>{post.postTitle}</td>
                             <td>{post.deadline}</td>
                             <td>
-                              <Link to={`/post-details/${post._id}`}>
+                              <Link to={`/post-details/${post.id}`}>
                                 <Button color="green">View Details</Button>
                               </Link>
                             </td>

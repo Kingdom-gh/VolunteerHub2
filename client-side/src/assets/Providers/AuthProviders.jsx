@@ -68,7 +68,7 @@ const AuthProvider = ({ children }) => {
     setUser(null);
     setLoading(true)
     try {
-      const response = await axios(`${import.meta.env.VITE_API_URL}/logout`, {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/logout`, {
         withCredentials: true,
       });
       console.log(response.data);  

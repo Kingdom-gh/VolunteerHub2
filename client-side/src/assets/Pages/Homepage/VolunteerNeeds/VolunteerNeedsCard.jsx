@@ -10,7 +10,7 @@ import {
 import { Link } from "react-router-dom";
 
 const VolunteerNeedsCard = ({volunteer}) => {
-  const{_id,thumbnail,post_title,category,deadline,description}=volunteer;
+  const{id,thumbnail,postTitle,category,deadline,description}=volunteer;
   return (
     <div data-aos="fade-down"
     data-aos-anchor-placement="top-bottom"
@@ -30,7 +30,7 @@ const VolunteerNeedsCard = ({volunteer}) => {
         </CardHeader>
         <CardBody>
           <Typography className="h-16" variant="h4" color="blue-gray">
-          {post_title}
+          {postTitle}
           </Typography>
           <Typography className="mt-2" variant="h5" color="blue-gray">
            <span className="text-green-500">{category}</span>
@@ -41,7 +41,7 @@ const VolunteerNeedsCard = ({volunteer}) => {
         </CardBody>
         <CardFooter className="flex items-center gap-8 justify-between">
           <div className="flex items-center -space-x-3">
-            <Link to={`/post-details/${_id}`}>
+            <Link to={`/post-details/${id}`}>
             <Button color="green">View Details</Button>
             </Link>
           </div>

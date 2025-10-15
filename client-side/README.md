@@ -37,3 +37,7 @@ Resources:
 - [Prop-Types](https://www.npmjs.com/package/prop-types)
 - [Daisy UI](https://daisyui.com/)
 - [TailwindCSS](https://tailwindcss.com/)
+
+issue(non important)
+*navbar -> expired:*
+https://scontent.fdac5-1.fna.fbcdn.net/v/t39.30808-1/439011287_2066347377098548_8157686076250003447_n.jpg?stp=c0.18.160.160a_dst-jpg_p160x160&_nc_cat=105&ccb=1-7&_nc_sid=5f2048&_nc_eui2=AeFoPHVS4MuUjKpaqCTRTXs49jcT3sWeuaL2NxPexZ65ouVvTeRM_qclM__aZCXcZCV-WlHLC1H49ESy2oFGMoYx&_nc_ohc=fwLCvDv5ouYQ7kNvgGPcPZ-&_nc_ht=scontent.fdac5-1.fna&oh=00_AfAZqQ9GY6Jj47JFOexgHg38333lX7HfIspbscIrYzc7xA&oe=6633E1CB 
