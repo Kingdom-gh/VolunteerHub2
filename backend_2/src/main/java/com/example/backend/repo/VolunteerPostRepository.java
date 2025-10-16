@@ -19,6 +19,7 @@ public interface VolunteerPostRepository extends JpaRepository<VolunteerPost, Lo
   // Lấy bài đăng theo email của tổ chức (API bị comment)
   List<VolunteerPost> findByOrgEmail(String orgEmail);
 
+  VolunteerPost findById(long id);
   // API: update-volunteer-count/:id
   @Modifying
   @Query("UPDATE VolunteerPost vp SET vp.noOfVolunteer = vp.noOfVolunteer - 1 WHERE vp.id = :id AND vp.noOfVolunteer > 0")

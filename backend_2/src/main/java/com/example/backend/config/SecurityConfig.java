@@ -79,7 +79,7 @@ public class SecurityConfig {
                             "/volunteers",
                             "/need-volunteers/**",
                             "/post/**",
-                            "/request-volunteer",
+//                            "/request-volunteer",
                             "/add-volunteer-post",
                             "/update-volunteer-count/**",
                             "/get-volunteer-post/**",

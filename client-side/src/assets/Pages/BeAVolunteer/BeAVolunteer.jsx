@@ -62,7 +62,20 @@ const BeAVolunteer = ({ title }) => {
     };
     console.log(requestVolunteerPost);
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/request-volunteer`, requestVolunteerPost)
+      const requestPost = {
+        "volunteerPost": {
+          "id": id,
+        },
+        "volunteer": {
+          "volunteerEmail": volunteerEmail,
+        },
+        "status": status,
+        "suggestion": suggestion,
+      }
+
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/request-volunteer`, requestPost, {
+        withCredentials: true
+      })
       console.log(data);
       toast.success("Your Volunteer Request has been sent ")
       form.reset();

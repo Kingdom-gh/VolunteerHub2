@@ -1,5 +1,7 @@
 package com.example.backend.security;
 
+import com.example.backend.entity.Volunteer;
+import com.example.backend.repo.VolunteerRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -24,6 +26,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   @Autowired
   private JwtService jwtService;
 
+  @Autowired
+  private VolunteerRepository volunteerRepository;
+
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
           throws ServletException, IOException {
@@ -32,25 +37,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     String token = getTokenFromCookie(request);
 
     if (token != null) {
+      System.out.println("DEBUG JWT: Token found in Cookie: " + token.substring(0, 10) + "..."); // ⭐️ Log tìm thấy token
       try {
         // 2. Xác thực và trích xuất email
         String userEmail = jwtService.extractUsername(token);
-
+        System.out.println("DEBUG JWT: Extracted Email: " + userEmail); // ⭐️ Log email trích xuất
         // 3. Nếu token hợp lệ và chưa được xác thực
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
           // Do ứng dụng chỉ sử dụng email làm định danh, chúng ta tạo UserDetails giả
           // Trong ứng dụng thực tế, bạn sẽ load UserDetails từ Database
-          UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
+//          UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
 
-          // 4. Tạo đối tượng Authentication
-          UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                  userDetails, null, userDetails.getAuthorities());
+          Volunteer volunteerDetails = volunteerRepository.findByVolunteerEmail(userEmail).orElseThrow();
+          if (volunteerDetails != null) {
+            System.out.println("DEBUG JWT: Volunteer Entity loaded successfully: " + volunteerDetails.getVolunteerEmail()); // ⭐️ Log thành công
 
-          authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            // 4. Tạo đối tượng Authentication
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    volunteerDetails, // ⭐️ Đặt Entity Volunteer thực tế vào Context
+                    null,
+                    volunteerDetails.getAuthorities()); // Yêu cầu Volunteer implement UserDetails
 
-          // 5. Thiết lập SecurityContext (Xác thực người dùng)
-          SecurityContextHolder.getContext().setAuthentication(authToken);
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            // 5. Thiết lập SecurityContext (Xác thực người dùng)
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+
+          } else {
+            System.err.println("DEBUG JWT ERROR: Volunteer found in token but not in database: " + userEmail);
+          }
         }
       } catch (Exception e) {
         // Xóa token lỗi và cho phép request đi tiếp, sẽ bị chặn bởi AuthorizationFilter sau
