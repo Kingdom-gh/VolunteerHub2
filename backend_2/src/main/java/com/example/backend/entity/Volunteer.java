@@ -1,11 +1,5 @@
 package com.example.backend.entity;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,18 +8,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-@Entity
-@Table(name = "volunteer")
 @Data
 public class Volunteer implements UserDetails {
-  @Id
-  @Column(name = "volunteerEmail")
   private String volunteerEmail;
-
-  @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, orphanRemoval = true)
-  @ToString.Exclude
-  private List<VolunteerRequest> requests;
-
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
