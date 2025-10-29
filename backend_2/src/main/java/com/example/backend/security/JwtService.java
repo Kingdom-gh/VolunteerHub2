@@ -63,7 +63,8 @@ public class JwtService {
 
     // *** ĐIỀU CHỈNH QUAN TRỌNG CHO LOCALHOST HTTP ***
     // 1. SameSite=None: Bắt buộc cho Cross-Origin (Frontend/Backend khác cổng)
-    sb.append("; SameSite=None");
+//    sb.append("; SameSite=None");
+    sb.append("; SameSite=Lax"); // Thay None bằng Lax để tránh lỗi với localhost
 
     // 2. Tắt Secure: Vì localhost chạy trên HTTP không an toàn, nếu bật Secure, trình duyệt sẽ từ chối set cookie.
     // Bỏ sb.append("; Secure");

@@ -8,12 +8,13 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Entity
-@Table(name = "volunteers") // Tên bảng trong MySQL là volunteers
+@Table(name = "volunteer_post") // Tên bảng trong MySQL là volunteers
 @Data // Tự động tạo getters, setters, toString, equals, hashCode (Lombok)
 public class VolunteerPost {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id")
   private Long id; // Tương đương id
 
 //  @JsonProperty("postTitle")
@@ -26,7 +27,14 @@ public class VolunteerPost {
   @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "MM/dd/yyyy")
   private LocalDate deadline; // Sử dụng LocalDate cho deadline
 
+  @Column(name = "location")
   private String location;
+
+  @Column(name = "description", columnDefinition = "TEXT")
+  private String description;
+
+  @Column(name = "thumbnail")
+  private String thumbnail;
 
 //  @JsonProperty("noOfVolunteer")
   @Column(name = "noOfVolunteer")
@@ -40,6 +48,8 @@ public class VolunteerPost {
   @Column(name = "orgEmail")
   private String orgEmail;
 
+  @OneToMany(mappedBy = "volunteerPost", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<VolunteerRequest> requests;
 //  // THÊM: Thiết lập quan hệ One-to-Many với VolunteerRequest
 //  // mappedBy chỉ ra tên trường trong entity VolunteerRequest chứa khóa ngoại
 //  // CascadeType.ALL: khi xóa post, tất cả requests liên quan cũng bị xóa.

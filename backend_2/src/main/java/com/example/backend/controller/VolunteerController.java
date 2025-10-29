@@ -1,19 +1,25 @@
 package com.example.backend.controller;
 
 
+import com.example.backend.dto.VolunteerRequestDto;
+import com.example.backend.entity.Volunteer;
 import com.example.backend.entity.VolunteerPost;
 import com.example.backend.entity.VolunteerRequest;
 import com.example.backend.repo.VolunteerPostRepository;
+import com.example.backend.repo.VolunteerRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.security.JwtService;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,6 +36,9 @@ public class VolunteerController {
   private VolunteerRequestRepository requestRepository;
 
   @Autowired
+  private VolunteerRepository volunteerRepository;
+
+  @Autowired
   private JwtService jwtService; // Dịch vụ xử lý JWT
 
   // --- JWT/AUTH ENDPOINTS ---
@@ -38,6 +47,13 @@ public class VolunteerController {
     String email = user.get("email");
     if (email == null) {
       return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
+    }
+//thêm user vào db nếu chưa có
+    Optional<Volunteer> existingVolunteer = volunteerRepository.findByVolunteerEmail(email);
+    if (existingVolunteer.isEmpty()) {
+      Volunteer newVolunteer = new Volunteer();
+      newVolunteer.setVolunteerEmail(email);
+      volunteerRepository.save(newVolunteer);
     }
 
     // Tạo JWT
@@ -70,8 +86,8 @@ public class VolunteerController {
   // API: /need-volunteers (Tất cả bài, có tìm kiếm)
   @GetMapping("/need-volunteers")
   public List<VolunteerPost> getAllVolunteers(@RequestParam(required = false) String search) {
-    System.out.println("✅ Request POST reached the Controller for /request-volunteer");
-    System.out.println("Request data: ");
+  //    System.out.println("✅ Request POST reached the Controller for /request-volunteer");
+  //    System.out.println("Request data: ");
     if (search != null && !search.isEmpty()) {
       return postRepository.findByPostTitleContainingIgnoreCase(search);
     }
@@ -121,6 +137,9 @@ public class VolunteerController {
     existingPost.setCategory(updatedData.getCategory());
     existingPost.setDeadline(updatedData.getDeadline());
     existingPost.setLocation(updatedData.getLocation());
+    existingPost.setNoOfVolunteer(updatedData.getNoOfVolunteer());
+    existingPost.setThumbnail(updatedData.getThumbnail());
+    existingPost.setDescription(updatedData.getDescription());
     // LƯU Ý: Không cập nhật orgEmail/orgName/noOfVolunteer ở đây (đã có API riêng cho count)
 
     postRepository.save(existingPost); // save hoạt động như update khi có ID
@@ -151,22 +170,94 @@ public class VolunteerController {
   // API: /request-volunteer (Hoàn thiện API bị comment)
   @PostMapping("/request-volunteer")
   @Transactional
-  public ResponseEntity<?> requestVolunteer(@RequestBody VolunteerRequest request) {
-    // ⭐️ Thêm log ngay khi bắt đầu hàm
+  public ResponseEntity<?> requestVolunteer(
+          // ⭐️ Thay thế VolunteerRequest bằng JsonNode
+          @RequestBody JsonNode body,
+          // ⭐️ Lấy Entity Volunteer đã xác thực từ JWT
+          @AuthenticationPrincipal Volunteer currentVolunteer) throws Exception {
 
-    // Có thể thêm logic kiểm tra noOfVolunteer > 0 trước khi insert
-    // Trong ví dụ này, ta chỉ insert
-    VolunteerRequest savedRequest = requestRepository.save(request);
+    // 1. KIỂM TRA XÁC THỰC
+
+    if (currentVolunteer == null) {
+      // Nếu token không hợp lệ hoặc thiếu (hoặc bị bỏ qua), SecurityContext sẽ trống.
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User must be authenticated to submit a request.");
+    }
+
+    // 2. TRÍCH XUẤT DỮ LIỆU TỪ JSONNODE
+    // Lấy postId (ví dụ: body.volunteerPost.id trong payload cũ của bạn)
+    JsonNode postIdNode = body.path("volunteerPost").path("id");
+
+    // Lấy suggestion (ví dụ: body.suggestion)
+    JsonNode suggestionNode = body.get("suggestion");
+
+    // Kiểm tra tính hợp lệ của dữ liệu cần thiết
+    if (postIdNode.isMissingNode() || !postIdNode.canConvertToInt() || suggestionNode.isMissingNode()) {
+      return ResponseEntity.badRequest().body("Missing or invalid 'volunteerPost.id' or 'suggestion' in request body.");
+    }
+
+    Long postId = postIdNode.asLong();
+    String suggestion = suggestionNode.asText();
+
+    // 3. TẢI ENTITY VolunteerPost (Đảm bảo nó tồn tại)
+    VolunteerPost post = postRepository.findById(postId).orElse(null);
+
+    // 4. XÂY DỰNG ENTITY VolunteerRequest HOÀN CHỈNH
+    VolunteerRequest newRequest = new VolunteerRequest();
+
+    // Gán các Entity đã được quản lý
+    newRequest.setVolunteerPost(post);
+    newRequest.setVolunteer(currentVolunteer); // ⭐️ Gán Volunteer đã xác thực từ JWT (Fix lỗi not-null)
+    System.out.println("✅ Volunteer making request: " + currentVolunteer.getUsername());
+    // Gán dữ liệu khác
+    newRequest.setSuggestion(suggestion);
+    newRequest.setStatus("Pending"); // Thiết lập trạng thái mặc định an toàn
+    newRequest.setRequestDate(LocalDateTime.now());
+
+    // 5. LƯU
+    VolunteerRequest savedRequest = requestRepository.save(newRequest);
+
+    //
     return ResponseEntity.ok(Map.of("insertedId", savedRequest.getId()));
   }
 
   // API: /get-volunteer-request/:email (Hoàn thiện API bị comment - Lấy yêu cầu của tôi)
   @GetMapping("/get-volunteer-request/{email}")
-  public List<VolunteerRequest> getMyVolunteerRequests(@PathVariable String email) {
-    System.out.println("✅ Request POST reached the Controller for /request-volunteer");
-    System.out.println("Request data: " + email);
-    return requestRepository.findByVolunteerEmail(email);
+  @Transactional // ⭐️ Giữ Session mở để tải LAZY Entity (fix L.I.E)
+  public List<VolunteerRequestDto> getMyVolunteerRequests(@PathVariable String email) {
+//    System.out.println("✅ Request POST reached the Controller for /request-volunteer");
+//    System.out.println("Request data: " + email);
+//    return requestRepository.findByVolunteerVolunteerEmail(email);
+//    List<VolunteerRequest> requests = requestRepository.findByVolunteerVolunteerEmail(email);
+//    System.out.println("✅ Found " + requests.size() + " requests for volunteer email: " + email);
+//    return requests;
+    // 1. Lấy email đã được xác thực
+    String authenticatedEmail = email; // Lấy từ UserDetails/Volunteer
+
+    // 2. Tải các VolunteerRequest
+    List<VolunteerRequest> requests = requestRepository.findByVolunteerVolunteerEmail(authenticatedEmail);
+
+    // 3. Chuyển đổi sang DTO
+    return requests.stream()
+            .map(request -> {
+              // Tải Entity Post LAZY (hoặc sử dụng nếu đã EAGER)
+              VolunteerPost post = request.getVolunteerPost();
+
+              VolunteerRequestDto dto = new VolunteerRequestDto();
+              dto.setId(request.getId());
+              dto.setStatus(request.getStatus());
+
+              // Ánh xạ các trường từ VolunteerPost
+              dto.setPostTitle(post.getPostTitle());
+              dto.setOrgEmail(post.getOrgEmail());
+              dto.setDeadline(post.getDeadline().toString()); // Cần xử lý định dạng Date/LocalDate
+              dto.setLocation(post.getLocation());
+              dto.setCategory(post.getCategory());
+
+              return dto;
+            })
+            .toList();
   }
+
 
   // API: /my-volunteer-request/:id (Hoàn thiện API bị comment - Hủy yêu cầu)
   @DeleteMapping("/my-volunteer-request/{id}")

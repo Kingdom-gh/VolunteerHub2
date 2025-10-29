@@ -8,5 +8,5 @@ import java.util.List;
 public interface VolunteerRequestRepository extends JpaRepository<VolunteerRequest, Long> {
 
   // API: get-volunteer-request/:email (Lấy các request đã đăng ký)
-  List<VolunteerRequest> findByVolunteerEmail(String volunteerEmail);
+  List<VolunteerRequest> findByVolunteerVolunteerEmail(String volunteerEmail);
 }
