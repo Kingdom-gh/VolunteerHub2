@@ -13,7 +13,15 @@ import { useNavigate } from "react-router-dom";
 const AddVolunteerPost = ({ title }) => {
   const [startDate, setStartDate] = useState(new Date());
   const { user } = UseAuth();
-  const navigate=useNavigate();
+  const navigate = useNavigate();
+  // Format date as MM/dd/yyyy (ensure leading zeros)
+  const formatDateMMDDYYYY = (date) => {
+    if (!date) return null;
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
+  };
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -22,7 +30,8 @@ const AddVolunteerPost = ({ title }) => {
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
     const noOfVolunteer = parseInt(form.noOfVolunteer.value);
-    const deadline = startDate.toLocaleDateString();
+    // Send deadline in MM/dd/yyyy format (backend expects leading zeros)
+    const deadline = formatDateMMDDYYYY(startDate);
     const orgName = form.orgName.value;
     const orgEmail = form.orgEmail.value;
     const description = form.description.value;
@@ -36,7 +45,7 @@ const AddVolunteerPost = ({ title }) => {
       description,
       orgEmail,
       orgName,
-      
+
     };
 
     try {
