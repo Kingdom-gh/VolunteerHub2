@@ -7,7 +7,11 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "volunteer_request") // Bảng mới cho Request
+@Table(name = "volunteer_request",
+  uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"volunteerEmail", "postId"})
+  }
+)
 @Data
 public class VolunteerRequest {
 
