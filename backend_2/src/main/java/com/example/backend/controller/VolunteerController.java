@@ -40,6 +40,8 @@ public class VolunteerController {
 
   @Autowired
   private JwtService jwtService; // Dịch vụ xử lý JWT
+  @Autowired
+  private com.example.backend.messaging.VolunteerRequestProducer requestProducer;
 
   // --- JWT/AUTH ENDPOINTS ---
   @PostMapping("/jwt")
@@ -218,6 +220,31 @@ public class VolunteerController {
 
     //
     return ResponseEntity.ok(Map.of("insertedId", savedRequest.getId()));
+  }
+
+  // API: /request-volunteer-async (Publish to RabbitMQ and return 202 with requestId)
+  @PostMapping("/request-volunteer-async")
+  public ResponseEntity<?> requestVolunteerAsync(
+          @RequestBody JsonNode body,
+          @AuthenticationPrincipal Volunteer currentVolunteer) {
+    if (currentVolunteer == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User must be authenticated to submit a request.");
+    }
+
+    JsonNode postIdNode = body.path("volunteerPost").path("id");
+    JsonNode suggestionNode = body.get("suggestion");
+    if (postIdNode.isMissingNode() || !postIdNode.canConvertToInt() || suggestionNode.isMissingNode()) {
+      return ResponseEntity.badRequest().body("Missing or invalid 'volunteerPost.id' or 'suggestion' in request body.");
+    }
+
+    Long postId = postIdNode.asLong();
+    String suggestion = suggestionNode.asText();
+
+    String requestId = requestProducer.enqueueCreateRequest(currentVolunteer.getVolunteerEmail(), postId, suggestion);
+    return ResponseEntity.accepted().body(Map.of(
+            "accepted", true,
+            "requestId", requestId
+    ));
   }
 
   // API: /get-volunteer-request/:email (Hoàn thiện API bị comment - Lấy yêu cầu của tôi)
