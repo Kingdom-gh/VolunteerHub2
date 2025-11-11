@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface VolunteerRepository extends JpaRepository<Volunteer, Long> {
+public interface VolunteerRepository extends JpaRepository<Volunteer, String> {
 
   // Phương thức tìm kiếm Tình nguyện viên theo Email
   Optional<Volunteer> findByVolunteerEmail(String volunteerEmail);
