@@ -33,35 +33,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
           throws ServletException, IOException {
 
-    // 1. Đọc token từ cookie
     String token = getTokenFromCookie(request);
 
     if (token != null) {
-      System.out.println("DEBUG JWT: Token found in Cookie: " + token.substring(0, 10) + "..."); // ⭐️ Log tìm thấy token
+      System.out.println("DEBUG JWT: Token found in Cookie: " + token.substring(0, 10) + "...");
       try {
-        // 2. Xác thực và trích xuất email
         String userEmail = jwtService.extractUsername(token);
-        System.out.println("DEBUG JWT: Extracted Email: " + userEmail); // ⭐️ Log email trích xuất
-        // 3. Nếu token hợp lệ và chưa được xác thực
+        System.out.println("DEBUG JWT: Extracted Email: " + userEmail);
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-          // Do ứng dụng chỉ sử dụng email làm định danh, chúng ta tạo UserDetails giả
-          // Trong ứng dụng thực tế, bạn sẽ load UserDetails từ Database
-//          UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
+
 
           Volunteer volunteerDetails = volunteerRepository.findByVolunteerEmail(userEmail).orElseThrow();
           if (volunteerDetails != null) {
             System.out.println("DEBUG JWT: Volunteer Entity loaded successfully: " + volunteerDetails.getVolunteerEmail()); // ⭐️ Log thành công
 
-            // 4. Tạo đối tượng Authentication
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    volunteerDetails, // ⭐️ Đặt Entity Volunteer thực tế vào Context
+                    volunteerDetails,
                     null,
-                    volunteerDetails.getAuthorities()); // Yêu cầu Volunteer implement UserDetails
+                    volunteerDetails.getAuthorities());
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-            // 5. Thiết lập SecurityContext (Xác thực người dùng)
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
           } else {
@@ -69,7 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           }
         }
       } catch (Exception e) {
-        // Xóa token lỗi và cho phép request đi tiếp, sẽ bị chặn bởi AuthorizationFilter sau
         System.err.println("JWT validation failed: " + e.getMessage());
       }
     }
@@ -77,13 +69,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  // Phương thức helper để lấy token từ cookie
   private String getTokenFromCookie(HttpServletRequest request) {
     if (request.getCookies() == null) {
       return null;
     }
 
-    // Tìm kiếm cookie có tên là "token"
     return Stream.of(request.getCookies())
             .filter(cookie -> "token".equals(cookie.getName()))
             .findFirst()

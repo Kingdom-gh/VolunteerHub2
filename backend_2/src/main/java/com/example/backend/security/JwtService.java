@@ -61,16 +61,7 @@ public class JwtService {
     sb.append("; Path=/");
     sb.append("; HttpOnly");
 
-    // *** ĐIỀU CHỈNH QUAN TRỌNG CHO LOCALHOST HTTP ***
-    // 1. SameSite=None: Bắt buộc cho Cross-Origin (Frontend/Backend khác cổng)
-//    sb.append("; SameSite=None");
-    sb.append("; SameSite=Lax"); // Thay None bằng Lax để tránh lỗi với localhost
-
-    // 2. Tắt Secure: Vì localhost chạy trên HTTP không an toàn, nếu bật Secure, trình duyệt sẽ từ chối set cookie.
-    // Bỏ sb.append("; Secure");
-
-    // Hoặc thêm logic kiểm tra môi trường nếu cần thiết
-    // if (isProductionEnvironment) { sb.append("; Secure"); }
+    sb.append("; SameSite=Lax");
 
     return sb.toString();
   }
@@ -83,9 +74,8 @@ public class JwtService {
             .getBody();
   }
 
-  // Phương thức mới: Trích xuất email (username) từ token
   public String extractUsername(String token) {
-    return extractAllClaims(token).getSubject(); // Mặc định Jjwt dùng Subject cho Username
+    return extractAllClaims(token).getSubject();
   }
 
   // Phiên bản cho JWT
