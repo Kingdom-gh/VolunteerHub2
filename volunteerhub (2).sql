@@ -83,7 +83,7 @@ INSERT INTO `volunteer_post` (`id`, `postTitle`, `category`, `deadline`, `locati
 (5, 'tập tạ', 'Education', '2025-10-16', 'Chittagong', 200, 'wukong', 'wu@gmail.com', 'https://demofree.sirv.com/nope-not-here.jpg', NULL),
 (6, 'tập tạ tăng cân', 'Healthcare', '2025-10-16', 'Dhaka', 22, 'wukong', 'wu@gmail.com', 'https://friendshipcenters.org/wp-content/uploads/2021/02/hm_CenterSarasota-1300x600-1.jpg', 'tăng cơ ');
 ALTER TABLE `volunteer_post`
-    ADD INDEX `idx_category_deadline` (`category`, `deadline`);
+    ADD INDEX `idx_category` (`category`);
 -- --------------------------------------------------------
 
 --
