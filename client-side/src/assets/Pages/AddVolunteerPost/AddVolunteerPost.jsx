@@ -9,6 +9,17 @@ import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 
+// Format date as MM/dd/yyyy (ensure leading zeros)
+const formatDateMMDDYYYY = (date) => {
+  if (!date) return null;
+
+  const d = new Date(date);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${mm}/${dd}/${yyyy}`; // "11/16/2028"
+};
 
 const AddVolunteerPost = ({ title }) => {
   const [startDate, setStartDate] = useState(new Date());
@@ -22,7 +33,7 @@ const AddVolunteerPost = ({ title }) => {
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
     const noOfVolunteer = parseInt(form.noOfVolunteer.value);
-    const deadline = startDate.toLocaleDateString();
+    const deadline = formatDateMMDDYYYY(startDate);
     const orgName = form.orgName.value;
     const orgEmail = form.orgEmail.value;
     const description = form.description.value;
@@ -36,7 +47,7 @@ const AddVolunteerPost = ({ title }) => {
       description,
       orgEmail,
       orgName,
-      
+
     };
 
     try {

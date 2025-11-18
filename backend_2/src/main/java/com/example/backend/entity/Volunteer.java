@@ -11,13 +11,17 @@ import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
 @Entity
 @Table(name = "volunteer")
 @Data
-public class Volunteer implements UserDetails {
+public class Volunteer implements UserDetails, Serializable {
+
+  private static final long serialVersionUID = 1L;
+
   @Id
   @Column(name = "volunteerEmail")
   private String volunteerEmail;
@@ -25,7 +29,6 @@ public class Volunteer implements UserDetails {
   @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, orphanRemoval = true)
   @ToString.Exclude
   private List<VolunteerRequest> requests;
-
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {

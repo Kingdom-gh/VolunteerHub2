@@ -5,11 +5,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.io.Serializable;
+
 
 @Entity
 @Table(name = "volunteer_request") // Bảng mới cho Request
 @Data
-public class VolunteerRequest {
+public class VolunteerRequest implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

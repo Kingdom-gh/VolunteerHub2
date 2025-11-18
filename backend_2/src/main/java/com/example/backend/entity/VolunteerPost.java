@@ -6,11 +6,14 @@ import lombok.Data;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "volunteer_post") // Tên bảng trong MySQL là volunteers
 @Data // Tự động tạo getters, setters, toString, equals, hashCode (Lombok)
-public class VolunteerPost {
+public class VolunteerPost implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
