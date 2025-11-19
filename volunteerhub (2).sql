@@ -82,7 +82,8 @@ INSERT INTO `volunteer_post` (`id`, `postTitle`, `category`, `deadline`, `locati
 (3, 'Phân phát suất ăn miễn phí cho người vô gia cư', 'Community Service', '2025-10-23', 'Ho Chi Minh City, Vietnam', 17, 'Food For All', 'food.forall@example.com', 'https://demofree.sirv.com/nope-not-here.jpg', NULL),
 (5, 'tập tạ', 'Education', '2025-10-16', 'Chittagong', 200, 'wukong', 'wu@gmail.com', 'https://demofree.sirv.com/nope-not-here.jpg', NULL),
 (6, 'tập tạ tăng cân', 'Healthcare', '2025-10-16', 'Dhaka', 22, 'wukong', 'wu@gmail.com', 'https://friendshipcenters.org/wp-content/uploads/2021/02/hm_CenterSarasota-1300x600-1.jpg', 'tăng cơ ');
-
+ALTER TABLE `volunteer_post`
+    ADD INDEX `idx_category` (`category`);
 -- --------------------------------------------------------
 
 --
