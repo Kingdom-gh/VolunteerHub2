@@ -92,3 +92,34 @@ Resources:
 - [Prop-Types](https://www.npmjs.com/package/prop-types)
 - [Daisy UI](https://daisyui.com/)
 - [TailwindCSS](https://tailwindcss.com/)
+
+## Async Volunteer Request (RabbitMQ - Spring Boot Backend)
+Hệ thống đã chuyển endpoint `POST /request-volunteer` sang bất đồng bộ sử dụng RabbitMQ.
+
+Luồng mới:
+1. Client gửi request với `volunteerPost.id` và `suggestion`.
+2. Backend trả về `202 Accepted` kèm `trackingId` và trạng thái `QUEUED` rất nhanh (không chờ ghi DB).
+3. Message được đưa vào queue `volunteer.request.queue` (exchange `volunteer.request.exchange`).
+4. Consumer lấy message, kiểm tra tính hợp lệ và ghi bản ghi vào MySQL sau đó cache Redis được evict cho email volunteer.
+5. Client có thể gọi lại `GET /get-volunteer-request/{email}` để thấy yêu cầu sau một độ trễ nhỏ.
+
+Cấu hình RabbitMQ (mặc định):
+```
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+```
+
+Chạy RabbitMQ nhanh bằng Docker:
+```bash
+docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+UI quản trị: http://localhost:15672 (guest/guest).
+
+Lợi ích:
+- Giảm độ trễ phản hồi API.
+- Tránh nghẽn khi nhiều người dùng gửi request cùng lúc.
+- Tăng khả năng chịu tải nhờ hàng đợi đệm.
+- Không phụ thuộc vào thời gian xử lý ghi DB trực tiếp.
+

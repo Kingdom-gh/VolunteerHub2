@@ -6,6 +6,9 @@ import com.example.backend.entity.VolunteerPost;
 import com.example.backend.entity.VolunteerRequest;
 import com.example.backend.repo.VolunteerPostRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
+import com.example.backend.repo.VolunteerRepository;
+import com.example.backend.messaging.VolunteerRequestMessage;
+import com.example.backend.messaging.VolunteerRequestProducer;
 import com.example.backend.service.VolunteerRequestService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -26,15 +29,12 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
 
     private final VolunteerRequestRepository requestRepository;
     private final VolunteerPostRepository postRepository;
+    private final VolunteerRepository volunteerRepository;
+    private final VolunteerRequestProducer producer;
 
     @Override
     @Transactional
-    @CacheEvict(
-        cacheNames = MY_REQUESTS_BY_EMAIL,
-        key = "#currentVolunteer.volunteerEmail.toLowerCase()",
-        condition = "#currentVolunteer != null && #currentVolunteer.volunteerEmail != null"
-    )
-    public Long requestVolunteer(JsonNode body, Volunteer currentVolunteer) {
+    public String requestVolunteer(JsonNode body, Volunteer currentVolunteer) {
         if (currentVolunteer == null) {
             throw new IllegalStateException("Unauthorized: missing volunteer principal");
         }
@@ -50,20 +50,33 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
 
         // ✅ findById trả Optional -> dùng orElseThrow cho rõ ràng
         // Ở dự án này findById trả trực tiếp VolunteerPost (có thể null)
+        // Validate tồn tại bài viết trước khi enqueue (để tránh spam queue vô nghĩa)
         VolunteerPost post = postRepository.findById(postId);
         if (post == null) {
             throw new IllegalArgumentException("Post not found: " + postId);
         }
 
+        // Đảm bảo volunteer entity được quản lý (tải lại từ repo theo email)
+        String email = currentVolunteer.getVolunteerEmail();
+        if (email == null || email.isBlank()) {
+            email = currentVolunteer.getUsername();
+        }
+        var managedVolunteerOpt = volunteerRepository.findByVolunteerEmail(email);
+        if (managedVolunteerOpt.isEmpty()) {
+            throw new IllegalStateException("Volunteer entity not found: " + email);
+        }
 
-        VolunteerRequest req = new VolunteerRequest();
-        req.setVolunteerPost(post);
-        req.setVolunteer(currentVolunteer); // Controller đã lấy principal; nếu cần entity managed, đảm bảo đã load từ DB
-        req.setSuggestion(suggestion);
-        req.setStatus("Pending");
-        req.setRequestDate(LocalDateTime.now()); // đã import
-
-        return requestRepository.saveAndFlush(req).getId();
+        // Tạo trackingId và gửi message
+        String trackingId = java.util.UUID.randomUUID().toString();
+        VolunteerRequestMessage message = VolunteerRequestMessage.builder()
+                .trackingId(trackingId)
+                .postId(postId)
+                .volunteerEmail(email)
+                .suggestion(suggestion)
+                .requestDate(LocalDateTime.now())
+                .build();
+        producer.send(message);
+        return trackingId;
     }
 
     @Override

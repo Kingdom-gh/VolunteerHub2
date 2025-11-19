@@ -169,7 +169,7 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
                                           @AuthenticationPrincipal Volunteer currentVolunteer) {
   if (currentVolunteer == null) {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-        .body("User must be authenticated to submit a request.");
+        .body(Map.of("message", "User must be authenticated to submit a request."));
   }
 
   String email = currentVolunteer.getVolunteerEmail();
@@ -179,12 +179,17 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
   var managedVolunteerOpt = volunteerRepository.findByVolunteerEmail(email);
   if (managedVolunteerOpt.isEmpty()) {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-        .body("Authenticated volunteer not found: " + email);
+        .body(Map.of("message", "Authenticated volunteer not found: " + email));
   }
   Volunteer managedVolunteer = managedVolunteerOpt.get();
 
-  Long insertedId = requestService.requestVolunteer(body, managedVolunteer);
-  return ResponseEntity.ok(Map.of("insertedId", insertedId));
+  String trackingId = requestService.requestVolunteer(body, managedVolunteer);
+  return ResponseEntity.status(HttpStatus.ACCEPTED)
+      .body(Map.of(
+          "trackingId", trackingId,
+          "status", "QUEUED",
+          "message", "Volunteer request has been queued for processing"
+      ));
 }
 
 

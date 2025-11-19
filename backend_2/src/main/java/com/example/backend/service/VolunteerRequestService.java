@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 
 public interface VolunteerRequestService {
-    // POST /request-volunteer  (body: JsonNode, user: @AuthenticationPrincipal)
-    Long requestVolunteer(JsonNode body, Volunteer currentVolunteer);
+    // POST /request-volunteer  -> chuyển sang async: trả về trackingId thay vì insertedId ngay lập tức
+    String requestVolunteer(JsonNode body, Volunteer currentVolunteer);
 
     // GET /get-volunteer-request/{email}
     List<VolunteerRequestDto> getMyVolunteerRequests(String email);
