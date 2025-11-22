@@ -12,6 +12,11 @@ import com.example.backend.cache.PostCacheEvictHelper;
 import static com.example.backend.config.RedisCacheConfig.*;
 import com.example.backend.dto.VolunteerPostDto;
 import java.util.stream.Collectors;
+import com.example.backend.exception.BadRequestException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import com.example.backend.exception.DownstreamServiceException;
 
 import java.util.List;
 
@@ -19,6 +24,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class VolunteerPostServiceImpl implements VolunteerPostService {
+    // chỉ dùng để test Retry
+    private int simulateRetryCounter = 0;
 
     private final VolunteerPostRepository postRepository;
     private final PostCacheEvictHelper postCacheEvictHelper;
@@ -42,6 +49,9 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     }
 
     @Override
+    @Retry(name = "volunteerPostService")
+    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getLatestVolunteersFallback")
+    @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = HOME_TOP6, key = "'top6'",
         unless = "#result == null || #result.isEmpty()")
     public List<VolunteerPostDto> getLatestVolunteers() {
@@ -51,7 +61,15 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
             .collect(Collectors.toList());
     }
 
+    @SuppressWarnings("unused")
+    private List<VolunteerPostDto> getLatestVolunteersFallback(Throwable ex) {
+        throw new DownstreamServiceException("Failed to load latest volunteer posts", ex);
+    }
+
     @Override
+    @Retry(name = "volunteerPostService")
+    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getAllVolunteersFallback")
+    @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POSTS,
         key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase())",
         unless = "#result == null || #result.isEmpty()")
@@ -68,12 +86,25 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
             .collect(Collectors.toList());
     }
 
+    @SuppressWarnings("unused")
+    private List<VolunteerPostDto> getAllVolunteersFallback(String search, Throwable ex) {
+        throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
+    }
+
     @Override
+    @Retry(name = "volunteerPostService")
+    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getVolunteerPostDetailsFallback")
+    @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POST_BY_ID, key = "#id", unless = "#result == null")
     public VolunteerPostDto getVolunteerPostDetails(Long id) {
         return postRepository.findById(id)
             .map(this::toDto)
             .orElse(null);
+    }
+
+    @SuppressWarnings("unused")
+    private VolunteerPostDto getVolunteerPostDetailsFallback(Long id, Throwable ex) {
+        throw new DownstreamServiceException("Failed to load volunteer post details for id=" + id, ex);
     }
 
     @Override
@@ -83,13 +114,13 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
         post.setId(null); // ✅ Ép insert
 
         if (post.getPostTitle() == null || post.getPostTitle().isBlank()) {
-            throw new IllegalArgumentException("postTitle is required");
+            throw new BadRequestException("postTitle is required");
         }
 
         // Nếu chọn Cách A (cho phép client gửi orgEmail), giữ check này:
         // Nếu chọn Cách B (lấy từ principal ở controller), bỏ check này đi.
         if (post.getOrgEmail() == null || post.getOrgEmail().isBlank()) {
-          throw new IllegalArgumentException("orgEmail is required");
+          throw new BadRequestException("orgEmail is required");
         } else {
            post.setOrgEmail(post.getOrgEmail().trim());
         }
@@ -99,7 +130,6 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
         var saved = postRepository.saveAndFlush(post);
         return saved.getId();
     }
-
 
     @Override
     @Transactional
@@ -140,6 +170,9 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     }
 
     @Override
+    @Retry(name = "volunteerPostService")
+    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getMyVolunteerPostsFallback")
+    @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = MY_POSTS_BY_EMAIL, key = "#email",
         unless = "#result == null || #result.isEmpty()")
     public List<VolunteerPostDto> getMyVolunteerPosts(String email) {
@@ -147,5 +180,10 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
         return posts.stream()
             .map(this::toDto)
             .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unused")
+    private List<VolunteerPostDto> getMyVolunteerPostsFallback(String email, Throwable ex) {
+        throw new DownstreamServiceException("Failed to load posts of org " + email, ex);
     }
 }

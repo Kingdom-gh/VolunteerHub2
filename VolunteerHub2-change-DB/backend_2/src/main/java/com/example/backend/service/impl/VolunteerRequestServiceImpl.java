@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
+import com.example.backend.exception.BadRequestException;
+import com.example.backend.exception.ResourceNotFoundException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import com.example.backend.exception.DownstreamServiceException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,8 +33,8 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
     private final VolunteerRequestRepository requestRepository;
     private final VolunteerPostRepository postRepository;
 
-    @Override
-    @Transactional
+    @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "requestVolunteerFallback")
+    @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
     @CacheEvict(
         cacheNames = MY_REQUESTS_BY_EMAIL,
         key = "#currentVolunteer.volunteerEmail.toLowerCase()",
@@ -42,7 +48,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         var postIdNode = body.path("volunteerPost").path("id");
         var suggestionNode = body.get("suggestion");
         if (postIdNode.isMissingNode() || !postIdNode.canConvertToInt() || suggestionNode == null) {
-            throw new IllegalArgumentException("Missing or invalid 'volunteerPost.id' or 'suggestion'");
+            throw new BadRequestException("Missing or invalid 'volunteerPost.id' or 'suggestion'");
         }
 
         long postId = postIdNode.asLong();
@@ -52,7 +58,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         // Ở dự án này findById trả trực tiếp VolunteerPost (có thể null)
         VolunteerPost post = postRepository.findById(postId);
         if (post == null) {
-            throw new IllegalArgumentException("Post not found: " + postId);
+            throw new ResourceNotFoundException("Post not found: " + postId);
         }
 
 
@@ -66,7 +72,15 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         return requestRepository.saveAndFlush(req).getId();
     }
 
-    @Override
+    @SuppressWarnings("unused")
+    private Long requestVolunteerFallback(JsonNode body, Volunteer currentVolunteer, Throwable ex) {
+        // là thao tác ghi nên không auto retry, chỉ báo lỗi 503
+        throw new DownstreamServiceException("Failed to create volunteer request", ex);
+    }
+
+    @Retry(name = "volunteerRequestService")
+    @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "getMyVolunteerRequestsFallback")
+    @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(
         cacheNames = MY_REQUESTS_BY_EMAIL,
         key = "#email.toLowerCase()",
@@ -79,7 +93,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             var dto = new VolunteerRequestDto();
             dto.setId(request.getId());
             dto.setStatus(request.getStatus());
-            if (post != null) { // ✅ tránh NPE nếu post bị null
+            if (post != null) {
                 dto.setPostTitle(post.getPostTitle());
                 dto.setOrgEmail(post.getOrgEmail());
                 dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
@@ -88,6 +102,11 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             }
             return dto;
         }).toList();
+    }
+
+    @SuppressWarnings("unused")
+    private List<VolunteerRequestDto> getMyVolunteerRequestsFallback(String email, Throwable ex) {
+        throw new DownstreamServiceException("Failed to load volunteer requests for " + email, ex);
     }
 
     @Override
