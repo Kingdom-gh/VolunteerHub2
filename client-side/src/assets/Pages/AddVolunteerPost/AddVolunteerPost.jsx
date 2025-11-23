@@ -24,11 +24,15 @@ const formatDateMMDDYYYY = (date) => {
 const AddVolunteerPost = ({ title }) => {
   const [startDate, setStartDate] = useState(new Date());
   const { user } = UseAuth();
-  const navigate=useNavigate();
+  const navigate = useNavigate();
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const postTitle = form.postTitle.value;
+    if (!postTitle || postTitle.trim() === "") {
+      toast.error("Post title is required");
+      return;
+    }
     const category = form.category.value;
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
@@ -60,7 +64,10 @@ const AddVolunteerPost = ({ title }) => {
       form.reset();
       navigate("/manage-my-post")
     } catch (err) {
-      console.log(err);
+      console.error(err);
+      // Prefer backend-provided message when available
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.error || err.message || "Failed to add post";
+      toast.error(backendMessage);
     }
   };
   return (
@@ -225,6 +232,6 @@ const AddVolunteerPost = ({ title }) => {
   );
 };
 AddVolunteerPost.propTypes = {
-  title: PropTypes.object.isRequired,
+  title: PropTypes.string.isRequired,
 }
 export default AddVolunteerPost;
