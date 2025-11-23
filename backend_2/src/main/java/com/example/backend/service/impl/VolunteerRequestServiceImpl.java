@@ -4,6 +4,8 @@ import com.example.backend.dto.VolunteerRequestDto;
 import com.example.backend.entity.Volunteer;
 import com.example.backend.entity.VolunteerPost;
 import com.example.backend.entity.VolunteerRequest;
+import com.example.backend.messaging.VolunteerRequestMessage;
+import com.example.backend.messaging.VolunteerRequestPublisher;
 import com.example.backend.repo.VolunteerPostRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.service.VolunteerRequestService;
@@ -32,14 +34,11 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
 
     private final VolunteerRequestRepository requestRepository;
     private final VolunteerPostRepository postRepository;
+    private final VolunteerRequestPublisher requestPublisher;
 
+    // Async publish only (no direct DB write). Returns -1L to indicate async accepted.
     @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "requestVolunteerFallback")
     @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
-    @CacheEvict(
-        cacheNames = MY_REQUESTS_BY_EMAIL,
-        key = "#currentVolunteer.volunteerEmail.toLowerCase()",
-        condition = "#currentVolunteer != null && #currentVolunteer.volunteerEmail != null"
-    )
     public Long requestVolunteer(JsonNode body, Volunteer currentVolunteer) {
         if (currentVolunteer == null) {
             throw new IllegalStateException("Unauthorized: missing volunteer principal");
@@ -54,28 +53,26 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         long postId = postIdNode.asLong();
         String suggestion = suggestionNode.asText();
 
-        // ✅ findById trả Optional -> dùng orElseThrow cho rõ ràng
-        // Ở dự án này findById trả trực tiếp VolunteerPost (có thể null)
+        // Optional validation to reject immediately if post not found (avoid queue spam)
         VolunteerPost post = postRepository.findById(postId);
         if (post == null) {
             throw new ResourceNotFoundException("Post not found: " + postId);
         }
 
+        // Publish message
+        VolunteerRequestMessage msg = new VolunteerRequestMessage(postId,
+                currentVolunteer.getVolunteerEmail(),
+                suggestion,
+                java.time.Instant.now());
+        requestPublisher.publish(msg);
 
-        VolunteerRequest req = new VolunteerRequest();
-        req.setVolunteerPost(post);
-        req.setVolunteer(currentVolunteer); // Controller đã lấy principal; nếu cần entity managed, đảm bảo đã load từ DB
-        req.setSuggestion(suggestion);
-        req.setStatus("Pending");
-        req.setRequestDate(LocalDateTime.now()); // đã import
-
-        return requestRepository.saveAndFlush(req).getId();
+        // Async: cannot return generated DB id now -> use sentinel
+        return -1L;
     }
 
     @SuppressWarnings("unused")
     private Long requestVolunteerFallback(JsonNode body, Volunteer currentVolunteer, Throwable ex) {
-        // là thao tác ghi nên không auto retry, chỉ báo lỗi 503
-        throw new DownstreamServiceException("Failed to create volunteer request", ex);
+        throw new DownstreamServiceException("Failed to enqueue volunteer request", ex);
     }
 
     @Retry(name = "volunteerRequestService")
