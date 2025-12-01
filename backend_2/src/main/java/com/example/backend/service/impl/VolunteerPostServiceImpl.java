@@ -19,6 +19,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
 import java.util.List;
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -63,7 +64,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getLatestVolunteersFallback(Throwable ex) {
-        throw new DownstreamServiceException("Failed to load latest volunteer posts", ex);
+        return Collections.emptyList();
     }
 
     @Override
@@ -88,7 +89,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getAllVolunteersFallback(String search, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
+        return Collections.emptyList();
     }
 
     @Override
@@ -104,7 +105,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private VolunteerPostDto getVolunteerPostDetailsFallback(Long id, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load volunteer post details for id=" + id, ex);
+        return null;
     }
 
     @Override
@@ -184,6 +185,6 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getMyVolunteerPostsFallback(String email, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load posts of org " + email, ex);
+        return Collections.emptyList();
     }
 }

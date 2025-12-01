@@ -1,0 +1,102 @@
+services:
+  # Cache
+  redis:
+    image: redis:7-alpine
+    container_name: volunteerhub-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    # Resource limits (leave headroom for JMeter)
+    cpus: 0.25
+    mem_limit: 256m
+    pids_limit: 256
+
+  # Message broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: volunteerhub-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "127.0.0.1:5672:5672"   # AMQP
+      - "127.0.0.1:15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 512
+
+  # Database
+  mysql:
+    image: mysql:8.4
+    container_name: volunteerhub-mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MYSQL_DATABASE: volunteerhub
+      MYSQL_ROOT_PASSWORD: secret
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - "../volunteerhub (2).sql:/docker-entrypoint-initdb.d/volunteerhub.sql:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 2g
+    pids_limit: 512
+
+  # Spring Boot backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: volunteerhub-backend:local
+    container_name: volunteerhub-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      # Override Spring datasource to use mysql container
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteerhub?serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: secret
+      # Redis inside compose network
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: "6379"
+      # Ensure Lettuce picks the correct URL (override any packaged property)
+      SPRING_REDIS_URL: redis://redis:6379
+      # RabbitMQ inside compose network
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: "5672"
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      # Respect app server port
+      SERVER_PORT: "5000"
+      # Temporary: disable Spring cache to avoid Redis dependency while debugging
+      SPRING_CACHE_TYPE: none
+      # Tune JVM further if needed; also force spring.redis.host at JVM system property
+      JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis
+    restart: unless-stopped
+    # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
+    cpus: 1.5
+    mem_limit: 2.5g
+    pids_limit: 768
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  mysql-data:

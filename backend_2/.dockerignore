@@ -1,0 +1,6 @@
+target/
+.git/
+.gitignore
+.mvn/
+Dockerfile
+*.log
