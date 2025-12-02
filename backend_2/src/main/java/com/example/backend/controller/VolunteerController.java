@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -86,10 +87,9 @@ public class VolunteerController {
   @GetMapping("/need-volunteers")
   public Page<VolunteerPostDto> getAllVolunteers(
       @RequestParam(required = false) String search,
-      @PageableDefault(size = 20) Pageable pageable) {
-    // Clamp kích thước tối đa để tránh abuse
-    int size = pageable.getPageSize() > 100 ? 100 : pageable.getPageSize();
-    Pageable effective = Pageable.ofSize(size).withPage(pageable.getPageNumber());
+      @PageableDefault(size = 15) Pageable pageable) {
+    // Bỏ qua tham số size từ client, luôn cố định size=15
+    Pageable effective = PageRequest.of(pageable.getPageNumber(), 15);
     return postService.getAllVolunteers(search, effective);
   }
 

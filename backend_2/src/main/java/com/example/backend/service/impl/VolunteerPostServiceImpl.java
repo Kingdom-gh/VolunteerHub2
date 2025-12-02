@@ -73,7 +73,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getAllVolunteersFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POSTS,
-        key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase())",
+        key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase()) + ':p:' + #pageable.pageNumber",
         unless = "#result == null || #result.isEmpty()")
     public Page<VolunteerPostDto> getAllVolunteers(String search, Pageable pageable) {
         Page<VolunteerPost> page;

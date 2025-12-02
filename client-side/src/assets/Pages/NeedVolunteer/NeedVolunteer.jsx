@@ -16,7 +16,6 @@ import LoadingGif from "../../Components/Loader/LoadingGif";
 const NeedVolunteer = ({ title }) => {
   const [volunteers, setVolunteers] = useState([]);
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -33,7 +32,7 @@ const NeedVolunteer = ({ title }) => {
     const getData = async () => {
       try {
         const { data } = await axios(
-          `${import.meta.env.VITE_API_URL}/need-volunteers?search=${encodeURIComponent(search)}&page=${page}&size=${size}`
+          `${import.meta.env.VITE_API_URL}/need-volunteers?search=${encodeURIComponent(search)}&page=${page}`
         );
 
         let content = [];
@@ -57,7 +56,7 @@ const NeedVolunteer = ({ title }) => {
       }
     };
     getData();
-  }, [search, page, size]);
+  }, [search, page]);
   console.log(volunteers);
   const [view, setView] = React.useState("module");
 
@@ -79,11 +78,7 @@ const NeedVolunteer = ({ title }) => {
   const handlePrevPage = () => {
     if (page > 0) setPage(page - 1);
   };
-  const handleSizeChange = (e) => {
-    const newSize = parseInt(e.target.value, 10) || 20;
-    setSize(newSize > 100 ? 100 : newSize);
-    setPage(0);
-  };
+  // Page size cố định ở backend = 15, không cho thay đổi trên UI
 
   const handleGrid = (e) => {
     setTableView(!e);
@@ -201,17 +196,7 @@ const NeedVolunteer = ({ title }) => {
                 Page {page + 1} / {totalPages || 1}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm">Size:</label>
-              <select
-                value={size}
-                onChange={handleSizeChange}
-                className="border rounded px-2 py-1"
-              >
-                {[10, 20, 30, 50, 100].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <span className="text-xs text-gray-500">(max 100)</span>
-            </div>
+
           </div>
           <div className={gridView ? "block" : "hidden"}>
             <div className=" container mx-auto mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 md:gap-y-12">
