@@ -1,18 +1,22 @@
 # Multi-stage build for Spring Boot backend
 
-# Build stage
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-17 AS base
 WORKDIR /workspace
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis"
 COPY pom.xml ./
-COPY src ./src
-# Build without tests to speed up container build
-RUN mvn -q -DskipTests package
+RUN mvn -q -B dependency:go-offline
 
-# Runtime stage
+FROM base AS dev
+COPY src ./src
+CMD ["mvn","spring-boot:run"]
+
+FROM base AS build
+COPY src ./src
+RUN mvn -q -B -DskipTests package
+
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-# Let Java size itself sanely within container limits
-ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0"
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis"
 COPY --from=build /workspace/target/*.jar /app/app.jar
 EXPOSE 5000
 ENTRYPOINT ["java","-jar","/app/app.jar"]

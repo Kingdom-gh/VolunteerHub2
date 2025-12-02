@@ -8,8 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Toàn bộ exception ném ra trong hệ thống sẽ đi qua đây
@@ -18,7 +16,6 @@ import org.slf4j.LoggerFactory;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   private ErrorResponse buildErrorResponse(
       HttpServletRequest request,
@@ -125,7 +122,6 @@ public class GlobalExceptionHandler {
       DownstreamServiceException ex,
       HttpServletRequest request
   ) {
-    log.error("Downstream service error for request {}", request.getRequestURI(), ex);
     ErrorResponse body = buildErrorResponse(
         request,
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -141,7 +137,6 @@ public class GlobalExceptionHandler {
       CallNotPermittedException ex,
       HttpServletRequest request
   ) {
-    log.warn("Circuit open for request {}", request.getRequestURI(), ex);
     ErrorResponse body = buildErrorResponse(
         request,
         HttpStatus.SERVICE_UNAVAILABLE,
@@ -158,7 +153,6 @@ public class GlobalExceptionHandler {
       Exception ex,
       HttpServletRequest request
   ) {
-    log.error("Unhandled exception for request {}", request.getRequestURI(), ex);
     ErrorResponse body = buildErrorResponse(
         request,
         HttpStatus.INTERNAL_SERVER_ERROR,

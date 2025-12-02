@@ -64,7 +64,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getLatestVolunteersFallback(Throwable ex) {
-        return Collections.emptyList();
+        throw new DownstreamServiceException("Failed to load latest volunteer posts", ex);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getAllVolunteersFallback(String search, Throwable ex) {
-        return Collections.emptyList();
+         throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
     }
 
     @Override
@@ -105,7 +105,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private VolunteerPostDto getVolunteerPostDetailsFallback(Long id, Throwable ex) {
-        return null;
+        throw new DownstreamServiceException("Failed to load volunteer post details for id=" + id, ex);
     }
 
     @Override
@@ -185,6 +185,6 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @SuppressWarnings("unused")
     private List<VolunteerPostDto> getMyVolunteerPostsFallback(String email, Throwable ex) {
-        return Collections.emptyList();
+        throw new DownstreamServiceException("Failed to load posts of org " + email, ex);
     }
 }

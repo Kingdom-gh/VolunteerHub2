@@ -30,50 +30,69 @@ services:
     mem_limit: 512m
     pids_limit: 512
 
-  # Database
+  # Database  
   mysql:
-    image: mysql:8.4
+    image: mysql:8.0
     container_name: volunteerhub-mysql
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
-    environment:
-      MYSQL_DATABASE: volunteerhub
-      MYSQL_ROOT_PASSWORD: secret
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pw
+      MYSQL_DATABASE: volunteerhub
+      MYSQL_USER: volunteerhub
+      MYSQL_PASSWORD: volunteerhub_pw
+      MYSQL_TCP_PORT: 3306
     volumes:
       - mysql-data:/var/lib/mysql
-      - "../volunteerhub (2).sql:/docker-entrypoint-initdb.d/volunteerhub.sql:ro"
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot_pw"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
-    cpus: 0.5
-    mem_limit: 2g
+    cpus: 0.75
+    mem_limit: 1.5g
     pids_limit: 512
+
+  adminer:
+    image: adminer:4
+    container_name: volunteerhub-adminer
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
 
   # Spring Boot backend
   backend:
     build:
       context: .
       dockerfile: Dockerfile
+      target: dev
     image: volunteerhub-backend:local
     container_name: volunteerhub-backend
+    volumes:
+      - ./:/workspace
+      - maven-repo:/root/.m2
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_started
       rabbitmq:
         condition: service_started
+      mysql:
+        condition: service_healthy
     ports:
       - "127.0.0.1:5000:5000"
     environment:
       # Override Spring datasource to use mysql container
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteerhub?serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_DATASOURCE_USERNAME: volunteerhub
+      SPRING_DATASOURCE_PASSWORD: volunteerhub_pw
+
       # Redis inside compose network
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: "6379"
@@ -100,3 +119,4 @@ volumes:
   redis-data:
   rabbitmq-data:
   mysql-data:
+  maven-repo:
