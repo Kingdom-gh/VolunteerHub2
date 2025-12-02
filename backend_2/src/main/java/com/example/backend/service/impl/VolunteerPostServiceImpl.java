@@ -19,7 +19,8 @@ import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
 import java.util.List;
-import java.util.Collections;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -74,23 +75,20 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Cacheable(cacheNames = POSTS,
         key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase())",
         unless = "#result == null || #result.isEmpty()")
-    public List<VolunteerPostDto> getAllVolunteers(String search) {
-        List<VolunteerPost> posts;
-        if (search != null && !search.isEmpty()) {
-            posts = postRepository.findByPostTitleContainingIgnoreCase(search);
+    public Page<VolunteerPostDto> getAllVolunteers(String search, Pageable pageable) {
+        Page<VolunteerPost> page;
+        if (search != null && !search.isBlank()) {
+            page = postRepository.findByPostTitleContainingIgnoreCase(search.trim(), pageable);
         } else {
-            posts = postRepository.findAll();
+            page = postRepository.findAll(pageable);
         }
-
-        return posts.stream()
-            .map(this::toDto)
-            .collect(Collectors.toList());
+        return page.map(this::toDto);
     }
 
     @SuppressWarnings("unused")
-    private List<VolunteerPostDto> getAllVolunteersFallback(String search, Throwable ex) {
-         throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
-    }
+        private Page<VolunteerPostDto> getAllVolunteersFallback(String search, Pageable pageable, Throwable ex) {
+            throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
+        }
 
     @Override
     @Retry(name = "volunteerPostService")

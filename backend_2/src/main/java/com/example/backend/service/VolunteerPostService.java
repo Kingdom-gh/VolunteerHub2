@@ -4,13 +4,15 @@ import com.example.backend.dto.VolunteerPostDto;
 import com.example.backend.entity.VolunteerPost;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface VolunteerPostService {
     // GET /volunteers (6 bài gần hết hạn, dùng cache)
     List<VolunteerPostDto> getLatestVolunteers();
 
-    // GET /need-volunteers?search=  (dùng cache)
-    List<VolunteerPostDto> getAllVolunteers(String search);
+    // GET /need-volunteers?search=&page=&size=  (dùng cache + phân trang)
+    Page<VolunteerPostDto> getAllVolunteers(String search, Pageable pageable);
 
     // GET /post/{id} (dùng cache)
     VolunteerPostDto getVolunteerPostDetails(Long id);

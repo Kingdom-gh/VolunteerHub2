@@ -2,6 +2,8 @@ package com.example.backend.repo;
 
 
 import com.example.backend.entity.VolunteerPost;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,8 +15,8 @@ public interface VolunteerPostRepository extends JpaRepository<VolunteerPost, Lo
   // Lấy 6 bài sắp hết hạn (deadline ASC)
   List<VolunteerPost> findTop6ByOrderByDeadlineAsc();
 
-  // Tìm kiếm bằng postTitle (LIKE)
-  List<VolunteerPost> findByPostTitleContainingIgnoreCase(String postTitle);
+  // Tìm kiếm bằng postTitle (LIKE) có phân trang
+  Page<VolunteerPost> findByPostTitleContainingIgnoreCase(String postTitle, Pageable pageable);
 
   // Lấy bài đăng theo email của tổ chức (API bị comment)
   List<VolunteerPost> findByOrgEmail(String orgEmail);

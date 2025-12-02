@@ -15,6 +15,9 @@ import LoadingGif from "../../Components/Loader/LoadingGif";
 
 const NeedVolunteer = ({ title }) => {
   const [volunteers, setVolunteers] = useState([]);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
   const [search, setSearch] = useState("");
   const [searchText, setSearchText] = useState("");
   const [showLoader, setShowLoader] = useState(true);
@@ -28,13 +31,33 @@ const NeedVolunteer = ({ title }) => {
   }, []);
   useEffect(() => {
     const getData = async () => {
-      const { data } = await axios(
-        `${import.meta.env.VITE_API_URL}/need-volunteers?search=${search}`
-      );
-      setVolunteers(data);
+      try {
+        const { data } = await axios(
+          `${import.meta.env.VITE_API_URL}/need-volunteers?search=${encodeURIComponent(search)}&page=${page}&size=${size}`
+        );
+
+        let content = [];
+        let tp = 0;
+        if (Array.isArray(data)) {
+          content = data;
+          tp = 1;
+        } else if (data && Array.isArray(data.content)) {
+          content = data.content;
+          tp = typeof data.totalPages === "number" ? data.totalPages : 1;
+        } else {
+
+          content = data || [];
+          tp = data && data.totalPages ? data.totalPages : 0;
+        }
+        setVolunteers(content);
+        setTotalPages(tp || 0);
+      } catch (e) {
+        setVolunteers([]);
+        setTotalPages(0);
+      }
     };
     getData();
-  }, [search]);
+  }, [search, page, size]);
   console.log(volunteers);
   const [view, setView] = React.useState("module");
 
@@ -46,8 +69,20 @@ const NeedVolunteer = ({ title }) => {
   };
 
   const handleSearch = () => {
-    console.log("searching text is", searchText);
-    setSearch(searchText);
+    setPage(0);
+    setSearch(searchText.trim());
+  };
+
+  const handleNextPage = () => {
+    if (page + 1 < totalPages) setPage(page + 1);
+  };
+  const handlePrevPage = () => {
+    if (page > 0) setPage(page - 1);
+  };
+  const handleSizeChange = (e) => {
+    const newSize = parseInt(e.target.value, 10) || 20;
+    setSize(newSize > 100 ? 100 : newSize);
+    setPage(0);
   };
 
   const handleGrid = (e) => {
@@ -145,6 +180,39 @@ const NeedVolunteer = ({ title }) => {
         <LoadingGif></LoadingGif>
       ) : (
         <div>
+          {/* Pagination Controls */}
+          <div className="container mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page === 0}
+                onClick={handlePrevPage}
+                className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                disabled={page + 1 >= totalPages}
+                onClick={handleNextPage}
+                className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+              >
+                Next
+              </button>
+              <span className="text-sm">
+                Page {page + 1} / {totalPages || 1}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm">Size:</label>
+              <select
+                value={size}
+                onChange={handleSizeChange}
+                className="border rounded px-2 py-1"
+              >
+                {[10, 20, 30, 50, 100].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <span className="text-xs text-gray-500">(max 100)</span>
+            </div>
+          </div>
           <div className={gridView ? "block" : "hidden"}>
             <div className=" container mx-auto mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 md:gap-y-12">
               {volunteers.map((volunteer) => (
@@ -157,7 +225,7 @@ const NeedVolunteer = ({ title }) => {
           </div>
           <div className={!tableView ? "hidden" : "block"}>
             <div data-aos="fade-up" data-aos-easing="linear" data-aos-duration="1500" className="container mx-auto mt-16">
-              <div  className="hidden md:block">
+              <div className="hidden md:block">
                 <div className="overflow-x-auto ">
                   <table className="table border-collapse border border-gray-400">
                     {/* head */}
