@@ -2,11 +2,9 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.VolunteerRequestDto;
 import com.example.backend.entity.Volunteer;
-import com.example.backend.entity.VolunteerPost;
 import com.example.backend.entity.VolunteerRequest;
 import com.example.backend.messaging.VolunteerRequestMessage;
 import com.example.backend.messaging.VolunteerRequestPublisher;
-import com.example.backend.repo.VolunteerPostRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.service.VolunteerRequestService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 import com.example.backend.exception.BadRequestException;
-import com.example.backend.exception.ResourceNotFoundException;
+// ResourceNotFoundException not needed after deferring post existence check to consumer
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -33,12 +31,9 @@ import static com.example.backend.config.RedisCacheConfig.MY_REQUESTS_BY_EMAIL;
 public class VolunteerRequestServiceImpl implements VolunteerRequestService {
 
     private final VolunteerRequestRepository requestRepository;
-    private final VolunteerPostRepository postRepository;
     private final VolunteerRequestPublisher requestPublisher;
 
     // Async publish only (no direct DB write). Returns -1L to indicate async accepted.
-    @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "requestVolunteerFallback")
-    @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
     public Long requestVolunteer(JsonNode body, Volunteer currentVolunteer) {
         if (currentVolunteer == null) {
             throw new IllegalStateException("Unauthorized: missing volunteer principal");
@@ -53,17 +48,12 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         long postId = postIdNode.asLong();
         String suggestion = suggestionNode.asText();
 
-        // Optional validation to reject immediately if post not found (avoid queue spam)
-        VolunteerPost post = postRepository.findById(postId);
-        if (post == null) {
-            throw new ResourceNotFoundException("Post not found: " + postId);
-        }
-
-        // Publish message
+        // Defer post existence verification to the consumer to make publish fast.
+        // Publish message (contains only postId + volunteer email + suggestion)
         VolunteerRequestMessage msg = new VolunteerRequestMessage(postId,
-                currentVolunteer.getVolunteerEmail(),
-                suggestion,
-                java.time.Instant.now());
+            currentVolunteer.getVolunteerEmail(),
+            suggestion,
+            java.time.Instant.now());
         requestPublisher.publish(msg);
 
         // Async: cannot return generated DB id now -> use sentinel

@@ -8,6 +8,8 @@ import com.example.backend.repo.VolunteerPostRepository;
 import com.example.backend.repo.VolunteerRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,7 @@ public class VolunteerRequestConsumer {
     private final VolunteerRepository volunteerRepository;
     private final VolunteerRequestRepository requestRepository;
     private final CacheManager cacheManager;
+    private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @RabbitListener(queues = RabbitConfig.QUEUE)
     @Transactional
@@ -34,14 +37,18 @@ public class VolunteerRequestConsumer {
         Long postId = message.getPostId();
         VolunteerPost post = (postId != null) ? postRepository.findById(postId.longValue()) : null;
         if (post == null) {
-            return; // invalid post, ignore
+            // Post not found: ACK and drop message (business decision)
+            logger.warn("Dropping volunteer request message: post not found (postId={})", postId);
+            return;
         }
-        Volunteer volunteer = volunteerRepository.findByVolunteerEmail(message.getVolunteerEmail())
-                .orElseGet(() -> {
-                    Volunteer v = new Volunteer();
-                    v.setVolunteerEmail(message.getVolunteerEmail());
-                    return volunteerRepository.save(v);
-                });
+
+        // Require an existing Volunteer record in DB for the provided email; if missing, drop message
+        var volunteerOpt = volunteerRepository.findByVolunteerEmail(message.getVolunteerEmail());
+        if (volunteerOpt.isEmpty()) {
+            logger.warn("Dropping volunteer request message: volunteer not found (email={})", message.getVolunteerEmail());
+            return;
+        }
+        Volunteer volunteer = volunteerOpt.get();
 
         VolunteerRequest request = new VolunteerRequest();
         request.setVolunteerPost(post);
