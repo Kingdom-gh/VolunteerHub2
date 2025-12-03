@@ -1,4 +1,4 @@
-package com.example.backend.service;
+package com.example.backend.entity;
 
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;

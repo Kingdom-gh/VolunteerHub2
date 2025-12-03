@@ -1,5 +1,7 @@
-package com.volunteerhub.backend.service;
-import com.volunteerhub.backend.entity.LatencyRecorder;
+package com.example.backend.security;
+import com.example.backend.entity.LatencyRecorder;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;

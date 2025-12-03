@@ -1,5 +1,7 @@
-package com.volunteerhub.backend.controller;
-import com.volunteerhub.backend.entity.LatencyRecorder;
+package com.example.backend.controller;
+import com.example.backend.entity.LatencyRecorder;
+import java.net.InetAddress;
+import org.springframework.boot.actuate.health.HealthComponent;
 import org.springframework.boot.actuate.health.HealthEndpoint;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.http.HttpStatus;
@@ -21,31 +23,49 @@ public class HealthCheckController {
         this.latencyRecorder = latencyRecorder;
     }
 
-    // Liveness Probe: Dùng cho Docker restart container nếu app treo cứng
     @GetMapping("/healthz")
     public ResponseEntity<String> liveness() {
         return ResponseEntity.ok("ALIVE");
     }
 
-    // Readiness Probe: Dùng cho Traefik routing
     @GetMapping("/readyz")
     public ResponseEntity<?> readiness() {
-        // 1. Check Infrastructure (MySQL, Redis)
-        if (healthEndpoint.health().getStatus() != Status.UP) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Infrastructure Down");
-        }
+            var health = (HealthComponent) healthEndpoint.health();
+            var details = ((org.springframework.boot.actuate.health.CompositeHealth) health).getComponents();
 
-        // 2. Check SLA Degradation
-        long p95 = latencyRecorder.getP95Latency();
-        if (p95 > SLA_LIMIT_MS) {
-            if (consecutiveFailures.incrementAndGet() >= 3) {
-                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body("Degraded: P95 latency " + p95 + "ms");
+            if (details.containsKey("db")) {
+                Status dbStatus = details.get("db").getStatus();
+                if (Status.DOWN.equals(dbStatus) || Status.OUT_OF_SERVICE.equals(dbStatus)) {
+                    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body("CRITICAL: MySQL is DOWN. Cannot serve traffic.");
+                }
             }
-        } else {
-            consecutiveFailures.set(0);
-        }
-
+            if (details.containsKey("redis")) {
+                Status redisStatus = details.get("redis").getStatus();
+                if (Status.DOWN.equals(redisStatus)) {
+                    System.out.println("WARNING: Redis is DOWN. System running in DEGRADED mode (Database only).");
+                }
+            }
+//        // 2. Check SLA Degradation
+//        long p95 = latencyRecorder.getP95Latency();
+//        if (p95 > SLA_LIMIT_MS) {
+//            if (consecutiveFailures.incrementAndGet() >= 3) {
+//                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+//                    .body("Degraded: P95 latency " + p95 + "ms");
+//            }
+//        } else {
+//            consecutiveFailures.set(0);
+//        }
+//
         return ResponseEntity.ok("READY");
+    }
+    @GetMapping("/whoami")
+    public ResponseEntity<String> whoAmI() {
+        try {
+            String hostName = InetAddress.getLocalHost().getHostName();
+            return ResponseEntity.ok("Hello! I am container: " + hostName);
+        } catch (Exception e) {
+            return ResponseEntity.ok("Unknown Container");
+        }
     }
 }

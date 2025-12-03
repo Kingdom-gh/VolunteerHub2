@@ -52,7 +52,7 @@ services:
       retries: 5
     restart: unless-stopped
     cpus: 0.75
-    mem_limit: 1.5g
+    mem_limit: 1500m
     pids_limit: 512
 
   adminer:
@@ -73,9 +73,9 @@ services:
       - "--api.insecure=true" # bat dashboard o port 8080
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.address=:5000"
     ports:
-      - "80:80"     # API Gateway Entrypoint
+      - "5000:5000"     # API Gateway Entrypoint
       - "8080:8080" # Traefik Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -123,39 +123,38 @@ services:
       # Respect app server port
       SERVER_PORT: "5000"
       # Temporary: disable Spring cache to avoid Redis dependency while debugging
-      SPRING_CACHE_TYPE: none
+      SPRING_CACHE_TYPE: redis
       # Tune JVM further if needed; also force spring.redis.host at JVM system property
       JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis
       SERVER_SHUTDOWN: "graceful"
       SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: "20s"
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
 
       # 1. Internal Healthcheck
-      healthcheck:
+    healthcheck:
         test: [ "CMD", "curl", "-f", "http://localhost:5000/healthz" ]
         interval: 10s
         timeout: 5s
         retries: 3
         start_period: 30s
       # 2. Traefik Configuration
-      labels:
+    labels:
         - "traefik.enable=true"
 
-        # Routing rule: Mọi request vào localhost:80 sẽ vào backend
+        # Routing rule: Mọi request sẽ vào backend
         - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
         - "traefik.http.services.backend.loadbalancer.server.port=5000"
 
         # Smart Health Check (Traefik routing logic)
-        # Chỉ route traffic vào container có /readyz trả về 200
         - "traefik.http.services.backend.loadbalancer.healthcheck.path=/readyz"
         - "traefik.http.services.backend.loadbalancer.healthcheck.interval=5s"
         - "traefik.http.services.backend.loadbalancer.healthcheck.timeout=2s"
 
         # Rate Limiting (100 req/s, burst 50)
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=100"
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=50"
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=10"
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=10"
         - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
