@@ -16,6 +16,8 @@ RUN mvn -q -B -DskipTests package
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis"
 COPY --from=build /workspace/target/*.jar /app/app.jar
 EXPOSE 5000

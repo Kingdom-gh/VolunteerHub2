@@ -59,22 +59,37 @@ services:
     image: adminer:4
     container_name: volunteerhub-adminer
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8080"
     environment:
       ADMINER_DEFAULT_SERVER: mysql
     depends_on:
       mysql:
         condition: service_healthy
     restart: unless-stopped
+  traefik:
+    image: traefik:v2.10
+    container_name: volunteerhub-traefik
+    command:
+      - "--api.insecure=true" # bat dashboard o port 8080
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"     # API Gateway Entrypoint
+      - "8080:8080" # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - backend
 
   # Spring Boot backend
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-      target: dev
+      #target: dev
     image: volunteerhub-backend:local
-    container_name: volunteerhub-backend
+    #container_name: volunteerhub-backend
     volumes:
       - ./:/workspace
       - maven-repo:/root/.m2
@@ -85,8 +100,10 @@ services:
         condition: service_started
       mysql:
         condition: service_healthy
-    ports:
-      - "127.0.0.1:5000:5000"
+    #ports:
+      #- "127.0.0.1:5000:5000"
+    expose:
+      - "5000"
     environment:
       # Override Spring datasource to use mysql container
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteerhub?serverTimezone=UTC
@@ -109,10 +126,41 @@ services:
       SPRING_CACHE_TYPE: none
       # Tune JVM further if needed; also force spring.redis.host at JVM system property
       JAVA_TOOL_OPTIONS: -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=25.0 -Dspring.redis.host=redis
+      SERVER_SHUTDOWN: "graceful"
+      SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: "20s"
+    deploy:
+      mode: replicated
+      replicas: 2
+
+      # 1. Internal Healthcheck
+      healthcheck:
+        test: [ "CMD", "curl", "-f", "http://localhost:5000/healthz" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 30s
+      # 2. Traefik Configuration
+      labels:
+        - "traefik.enable=true"
+
+        # Routing rule: Mọi request vào localhost:80 sẽ vào backend
+        - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
+        - "traefik.http.services.backend.loadbalancer.server.port=5000"
+
+        # Smart Health Check (Traefik routing logic)
+        # Chỉ route traffic vào container có /readyz trả về 200
+        - "traefik.http.services.backend.loadbalancer.healthcheck.path=/readyz"
+        - "traefik.http.services.backend.loadbalancer.healthcheck.interval=5s"
+        - "traefik.http.services.backend.loadbalancer.healthcheck.timeout=2s"
+
+        # Rate Limiting (100 req/s, burst 50)
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=100"
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=50"
+        - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
-    cpus: 1.5
-    mem_limit: 2.5g
+    cpus: 0.75
+    mem_limit: 800m
     pids_limit: 768
 
 volumes:
