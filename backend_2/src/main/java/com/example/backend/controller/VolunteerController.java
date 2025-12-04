@@ -180,18 +180,14 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
         .body("User must be authenticated to submit a request.");
   }
 
+  // Use the authentication principal only (do not synchronously look up user in DB here)
+  // Consumer will decide whether the volunteer record exists or not.
   String email = currentVolunteer.getVolunteerEmail();
   if (email == null || email.isBlank()) {
     email = currentVolunteer.getUsername();
   }
-  var managedVolunteerOpt = volunteerRepository.findByVolunteerEmail(email);
-  if (managedVolunteerOpt.isEmpty()) {
-    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-        .body("Authenticated volunteer not found: " + email);
-  }
-  Volunteer managedVolunteer = managedVolunteerOpt.get();
 
-  Long insertedId = requestService.requestVolunteer(body, managedVolunteer);
+  Long insertedId = requestService.requestVolunteer(body, currentVolunteer);
   return ResponseEntity.ok(Map.of("insertedId", insertedId));
 }
 
