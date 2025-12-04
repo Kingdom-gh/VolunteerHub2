@@ -48,6 +48,10 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         long postId = postIdNode.asLong();
         String suggestion = suggestionNode.asText();
 
+        if (postId < 0) {
+            throw new BadRequestException("'volunteerPost.id' must be a positive number");
+        }
+        
         // Defer post existence verification to the consumer to make publish fast.
         // Publish message (contains only postId + volunteer email + suggestion)
         VolunteerRequestMessage msg = new VolunteerRequestMessage(postId,

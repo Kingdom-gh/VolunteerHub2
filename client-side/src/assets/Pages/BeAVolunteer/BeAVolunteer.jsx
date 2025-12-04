@@ -83,14 +83,8 @@ const BeAVolunteer = ({ title }) => {
     catch (err) {
       console.log(err);
     }
-    try {
-      const { data } = await axios.put(`${import.meta.env.VITE_API_URL}/update-volunteer-count/${id}`)
-      console.log(data);
-      navigate("/manage-my-post")
-    }
-    catch (err) {
-      console.log(err);
-    }
+    // Do not decrement count here; organizer will decide (accept/reject)
+    navigate("/manage-my-post")
   };
   return (
     <div

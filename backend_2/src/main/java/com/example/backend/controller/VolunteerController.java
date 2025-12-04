@@ -21,6 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.dto.VolunteerPostDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.SimpleMailMessage;
 
 import java.util.List;
 import java.util.Map;
@@ -43,6 +50,9 @@ public class VolunteerController {
   private final VolunteerRequestService requestService;
 
   private final VolunteerRequestRepository requestRepository;
+
+  @Autowired(required = false)
+  private JavaMailSender mailSender;
 
   // --- JWT/AUTH ENDPOINTS ---
   @PostMapping("/jwt")
@@ -198,6 +208,82 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     return requestService.getMyVolunteerRequests(email);
   }
 
+  // Lấy yêu cầu gửi tới các post của organizer (theo orgEmail)
+  @GetMapping("/get-volunteer-requests-for-org/{email}")
+  public List<VolunteerRequestDto> getRequestsForOrganizer(@PathVariable String email,
+                                                           @AuthenticationPrincipal Volunteer current) {
+    // Optional auth reinforce: require principal to match orgEmail
+    String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
+        ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
+      return List.of();
+    }
+    var requests = requestRepository.findByVolunteerPostOrgEmail(email);
+    return requests.stream().map(request -> {
+      var post = request.getVolunteerPost();
+      var dto = new VolunteerRequestDto();
+      dto.setId(request.getId());
+      dto.setStatus(request.getStatus());
+      if (post != null) {
+        dto.setPostTitle(post.getPostTitle());
+        dto.setOrgEmail(post.getOrgEmail());
+        dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
+        dto.setLocation(post.getLocation());
+        dto.setCategory(post.getCategory());
+      }
+      return dto;
+    }).toList();
+  }
+
+  // Pending count per post for organizer
+  @GetMapping("/org/{email}/posts-with-pending-count")
+  public List<Map<String, Object>> getPostsWithPendingCounts(@PathVariable String email,
+                                                             @AuthenticationPrincipal Volunteer current) {
+    String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
+        ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
+      return List.of();
+    }
+    var posts = postService.getMyVolunteerPosts(email);
+    return posts.stream().map(p -> Map.<String, Object>of(
+      "id", p.getId(),
+      "postTitle", p.getPostTitle(),
+      "pendingCount", requestRepository.countByVolunteerPostIdAndStatusIgnoreCase(p.getId(), "Pending")
+    )).toList();
+  }
+
+  // Paged requests for a specific post (fixed page size = 10)
+  @GetMapping("/post/{postId}/requests")
+  public Page<VolunteerRequestDto> getRequestsForPost(@PathVariable Long postId,
+                                                      @RequestParam(defaultValue = "0") int page,
+                                                      @AuthenticationPrincipal Volunteer current) {
+    // Auth: ensure principal owns the post
+    var postDto = postService.getVolunteerPostDetails(postId);
+    String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
+        ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
+    if (postDto == null || principalEmail == null || !principalEmail.equalsIgnoreCase(postDto.getOrgEmail())) {
+      return Page.empty();
+    }
+    // Fixed page size to 10 regardless of client input
+    final int FIXED_PAGE_SIZE = 10;
+    Pageable pageable = PageRequest.of(page, FIXED_PAGE_SIZE);
+    var pageReq = requestRepository.findByVolunteerPostId(postId, pageable);
+    return pageReq.map(request -> {
+      var dto = new VolunteerRequestDto();
+      dto.setId(request.getId());
+      dto.setStatus(request.getStatus());
+      var post = request.getVolunteerPost();
+      if (post != null) {
+        dto.setPostTitle(post.getPostTitle());
+        dto.setOrgEmail(post.getOrgEmail());
+        dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
+        dto.setLocation(post.getLocation());
+        dto.setCategory(post.getCategory());
+      }
+      return dto;
+    });
+  }
+
   // Huỷ yêu cầu
   @DeleteMapping("/my-volunteer-request/{id}")
   public ResponseEntity<?> removeVolunteerRequest(@PathVariable Long id) {
@@ -211,6 +297,116 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
 
     // 3) Trả kết quả OK
     return ResponseEntity.ok(Map.of("success", true));
+  }
+
+  // --- APPROVAL FLOW ---
+  @PutMapping("/volunteer-request/{id}/approve")
+  @Transactional
+  public ResponseEntity<?> approveVolunteerRequest(@PathVariable Long id,
+                                                   @AuthenticationPrincipal Volunteer current) {
+    var opt = requestRepository.findById(id);
+    if (opt.isEmpty()) return ResponseEntity.notFound().build();
+    var req = opt.get();
+
+    var post = req.getVolunteerPost();
+    if (post == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(Map.of("message", "Missing post for request"));
+
+    // Permission: only post owner can approve
+    String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
+        ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(post.getOrgEmail())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(Map.of("message", "Only post owner can approve"));
+    }
+
+    // Guard: already decided
+    String status = req.getStatus();
+    if (status != null && (status.equalsIgnoreCase("Accepted") || status.equalsIgnoreCase("Rejected"))) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Request is already decided"));
+    }
+
+    // Guard: available slots
+    Integer slots = post.getNoOfVolunteer();
+    if (slots != null && slots <= 0) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "No available slots"));
+    }
+
+    // Update status then decrement count atomically
+    req.setStatus("Accepted");
+    requestRepository.save(req);
+    int updated = postService.decrementVolunteerCount(post.getId());
+    if (updated == 0) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Failed to decrement count");
+    }
+
+    // Email notifications (best-effort)
+    sendDecisionEmails(post.getPostTitle(), post.getOrgEmail(),
+        req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
+        true);
+
+    return ResponseEntity.ok(Map.of("success", true));
+  }
+
+  @PutMapping("/volunteer-request/{id}/reject")
+  @Transactional
+  public ResponseEntity<?> rejectVolunteerRequest(@PathVariable Long id,
+                                                  @AuthenticationPrincipal Volunteer current) {
+    var opt = requestRepository.findById(id);
+    if (opt.isEmpty()) return ResponseEntity.notFound().build();
+    var req = opt.get();
+
+    var post = req.getVolunteerPost();
+    if (post == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(Map.of("message", "Missing post for request"));
+
+    String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
+        ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(post.getOrgEmail())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(Map.of("message", "Only post owner can reject"));
+    }
+
+    String status = req.getStatus();
+    if (status != null && (status.equalsIgnoreCase("Accepted") || status.equalsIgnoreCase("Rejected"))) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Request is already decided"));
+    }
+
+    req.setStatus("Rejected");
+    requestRepository.save(req);
+
+    sendDecisionEmails(post.getPostTitle(), post.getOrgEmail(),
+        req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
+        false);
+
+    return ResponseEntity.ok(Map.of("success", true));
+  }
+
+  private void sendDecisionEmails(String postTitle, String orgEmail, String volunteerEmail, boolean accepted) {
+    if (mailSender == null) return; // mail not configured
+    try {
+      String subject = "Volunteer Request " + (accepted ? "Accepted" : "Rejected");
+      String body = (accepted ? "Your request has been accepted for post: " : "Your request has been rejected for post: ")
+          + (postTitle != null ? postTitle : "(unknown)");
+      if (volunteerEmail != null && !volunteerEmail.isBlank()) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(volunteerEmail);
+        if (orgEmail != null && !orgEmail.isBlank()) msg.setCc(orgEmail);
+        msg.setSubject(subject);
+        msg.setText(body);
+        mailSender.send(msg);
+      }
+      if (orgEmail != null && !orgEmail.isBlank()) {
+        SimpleMailMessage msg2 = new SimpleMailMessage();
+        msg2.setTo(orgEmail);
+        msg2.setSubject(subject + " (copy)");
+        msg2.setText("You have " + (accepted ? "approved" : "rejected") + " a request for post: " + (postTitle != null ? postTitle : "(unknown)"));
+        mailSender.send(msg2);
+      }
+    } catch (Exception ignored) {}
   }
 
   @GetMapping("/")

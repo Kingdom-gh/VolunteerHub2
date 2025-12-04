@@ -2,14 +2,18 @@ import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 import "react-tabs/style/react-tabs.css";
 import MyVolunteerPost from "./MyVolunteerPost/MyVolunteerPost";
 import MyVolunteerRequest from "./MyVolunteerRequest/MyVolunteerRequest";
+import RequestDetails from "./RequestDetails/RequestDetails";
+import { useState } from 'react';
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import Loader from "../../Components/Loader/Loader";
 
 
-const ManageMyPost = ({title}) => {
-  const navigation=useNavigate()
+const ManageMyPost = ({ title }) => {
+  const navigation = useNavigate()
+  const [tabIndex, setTabIndex] = useState(0);
+  const [selectedPostId, setSelectedPostId] = useState(null);
   if (navigation.state === "loading") return <Loader />;
   return (
     <div className="mt-16">
@@ -19,21 +23,27 @@ const ManageMyPost = ({title}) => {
             {title}
           </title>
         </Helmet>
-        <Tabs>
+        <Tabs selectedIndex={tabIndex} onSelect={(index) => setTabIndex(index)}>
           <div className="mx-8 md:mx-0 flex items-center justify-center">
             <TabList>
               <Tab>My Need Volunteer Post</Tab>
               <Tab>My Volunteer Request Post</Tab>
+              <Tab>Request Details</Tab>
             </TabList>
           </div>
           <TabPanel>
             <h2>
-              <MyVolunteerPost title="My Volunteer Post"></MyVolunteerPost>
+              <MyVolunteerPost title="My Volunteer Post" onOpenRequests={(postId) => { setSelectedPostId(postId); setTabIndex(2); }} />
             </h2>
           </TabPanel>
           <TabPanel>
             <h2>
               <MyVolunteerRequest title="My Volunteer Request"></MyVolunteerRequest>
+            </h2>
+          </TabPanel>
+          <TabPanel>
+            <h2>
+              <RequestDetails selectedPostId={selectedPostId} />
             </h2>
           </TabPanel>
         </Tabs>

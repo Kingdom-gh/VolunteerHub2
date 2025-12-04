@@ -11,12 +11,13 @@ import BeAVolunteer from "../Pages/BeAVolunteer/BeAVolunteer";
 import NeedVolunteer from "../Pages/NeedVolunteer/NeedVolunteer";
 import UpdateMyPost from "../Pages/UpdateMyPost/UpdateMyPost";
 import ErrorPage from "../Pages/ErrorPage/ErrorPage";
- 
+import RequestDetails from "../Pages/ManageMyPost/RequestDetails/RequestDetails";
+
 const router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout></MainLayout>,
-    errorElement:<ErrorPage></ErrorPage>,
+    errorElement: <ErrorPage></ErrorPage>,
     children: [
       {
         index: true,
@@ -33,7 +34,7 @@ const router = createBrowserRouter([
       {
         path: "/need-volunteer",
         element: <NeedVolunteer title="Need Volunteers"></NeedVolunteer>,
-        loader:() =>fetch(`${import.meta.env.VITE_API_URL}/need-volunteers`),
+        loader: () => fetch(`${import.meta.env.VITE_API_URL}/need-volunteers`),
       },
       {
         path: "/add-volunteer-post",
@@ -48,6 +49,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoutes>
             <ManageMyPost ></ManageMyPost>
+          </PrivateRoutes>
+        ),
+      },
+      {
+        path: "/manage-my-post/requests/:postId",
+        element: (
+          <PrivateRoutes>
+            <RequestDetails></RequestDetails>
           </PrivateRoutes>
         ),
       },
