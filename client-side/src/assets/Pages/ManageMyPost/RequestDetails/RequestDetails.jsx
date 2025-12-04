@@ -83,7 +83,7 @@ const RequestDetails = ({ selectedPostId: selectedPostIdFromParent }) => {
                     {posts.length === 0 && <option value="">No posts found</option>}
                     {posts.map(p => (
                         <option key={p.id} value={p.id}>
-                            {p.postTitle} {counts[p.id] ? `(${counts[p.id]} pending)` : ""}
+                            {p.postTitle}
                         </option>
                     ))}
                 </select>

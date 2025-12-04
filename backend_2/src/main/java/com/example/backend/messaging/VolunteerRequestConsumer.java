@@ -50,11 +50,7 @@ public class VolunteerRequestConsumer {
         }
         Volunteer volunteer = volunteerOpt.get();
 
-        // Prevent duplicate volunteer requests for the same post by the same volunteer
-        if (requestRepository.existsByVolunteerVolunteerEmailAndVolunteerPostId(volunteer.getVolunteerEmail(), postId)) {
-            logger.info("Skipping duplicate volunteer request: email={} postId={}", volunteer.getVolunteerEmail(), postId);
-            return; // already requested -> drop duplicate message
-        }
+        // Rely on DB uniqueness to enforce single request per user/post (idempotent by DB)
 
         VolunteerRequest request = new VolunteerRequest();
         request.setVolunteerPost(post);
@@ -63,7 +59,14 @@ public class VolunteerRequestConsumer {
         request.setStatus("Pending");
         request.setRequestDate(LocalDateTime.now());
 
-        requestRepository.save(request);
+        // Idempotent create: rely on DB unique constraint (volunteerEmail, postId)
+        try {
+            requestRepository.save(request);
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            // Duplicate insert prevented by DB uniqueness -> drop silently
+            logger.info("Duplicate volunteer request prevented by DB (key={}): {}", message.getIdempotentKey(), ex.getMessage());
+            return;
+        }
 
         // Evict cache of this volunteer's requests so next read is fresh
         if (cacheManager != null) {

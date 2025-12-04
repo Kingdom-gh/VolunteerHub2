@@ -111,7 +111,6 @@ TRUNCATE TABLE `volunteer_request`;
 --
 
 INSERT INTO `volunteer_request` (`id`, `volunteerEmail`, `postId`, `status`, `suggestion`, `requestDate`) VALUES
-(2, 'wu@gmail.com', 1, 'Requested', '', NULL),
 (4, 'sinestria@gmail.com', 1, 'Reject', '', NULL),
 (5, 'wu@gmail.com', 2, 'Requested', '', NULL),
 (6, 'wu@gmail.com', 1, 'Pending', '3', '2025-10-16 15:42:43.000000'),
@@ -168,7 +167,8 @@ ALTER TABLE `volunteer_request`
 --
 ALTER TABLE `volunteer_request`
   ADD CONSTRAINT `request1` FOREIGN KEY (`postId`) REFERENCES `volunteer_post` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `request2` FOREIGN KEY (`volunteerEmail`) REFERENCES `volunteer` (`volunteerEmail`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `request2` FOREIGN KEY (`volunteerEmail`) REFERENCES `volunteer` (`volunteerEmail`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `uq_volunteer_post` UNIQUE (`volunteerEmail`, `postId`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

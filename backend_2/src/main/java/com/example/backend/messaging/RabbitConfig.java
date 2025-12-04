@@ -145,9 +145,10 @@ public class RabbitConfig {
     public Queue volunteerRequestDeleteQueue() {
         // Simple durable queue for delete messages, dead-letter to DLX on failure
         var args = new java.util.HashMap<String, Object>();
-        args.put("x-dead-letter-exchange", DLX);
-        args.put("x-dead-letter-routing-key", DELETE_ROUTING_KEY);
-        return new Queue(DELETE_QUEUE, true);
+        // dead-letter into delete retry exchange first
+        args.put("x-dead-letter-exchange", DELETE_RETRY_EXCHANGE);
+        args.put("x-dead-letter-routing-key", DELETE_RETRY_ROUTING_KEY_1);
+        return new Queue(DELETE_QUEUE, true, false, false, args);
     }
 
     @Bean

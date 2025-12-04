@@ -15,4 +15,6 @@ public class VolunteerRequestMessage implements Serializable {
     private String volunteerEmail;
     private String suggestion;
     private Instant createdAt;
+    // Idempotent key format: "userId:eventId" -> here "volunteerEmail:postId"
+    private String idempotentKey;
 }

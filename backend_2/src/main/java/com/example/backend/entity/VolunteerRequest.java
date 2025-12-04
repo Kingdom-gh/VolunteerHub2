@@ -9,7 +9,10 @@ import java.io.Serializable;
 
 
 @Entity
-@Table(name = "volunteer_request") // Bảng mới cho Request
+@Table(
+  name = "volunteer_request",
+  uniqueConstraints = @UniqueConstraint(columnNames = {"volunteerEmail", "postId"})
+) // Bảng mới cho Request + Unique(user,post)
 @Data
 public class VolunteerRequest implements Serializable {
 

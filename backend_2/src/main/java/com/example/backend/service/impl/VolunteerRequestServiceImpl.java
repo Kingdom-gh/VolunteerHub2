@@ -54,10 +54,12 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         
         // Defer post existence verification to the consumer to make publish fast.
         // Publish message (contains only postId + volunteer email + suggestion)
+        String idempotentKey = currentVolunteer.getVolunteerEmail() + ":" + postId;
         VolunteerRequestMessage msg = new VolunteerRequestMessage(postId,
             currentVolunteer.getVolunteerEmail(),
             suggestion,
-            java.time.Instant.now());
+            java.time.Instant.now(),
+            idempotentKey);
         requestPublisher.publish(msg);
 
         // Async: cannot return generated DB id now -> use sentinel
