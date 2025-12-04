@@ -20,7 +20,7 @@ services:
             timeout: 5s
             retries: 5
         restart: unless-stopped
-        cpus: 1
+        cpus: 0.75
         mem_limit: 1.5g
         pids_limit: 512
     adminer:
