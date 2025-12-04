@@ -102,11 +102,14 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
 
     @Override
     @Transactional
-    @CacheEvict(cacheNames = MY_REQUESTS_BY_EMAIL, allEntries = true) // đơn giản
+    @CacheEvict(cacheNames = MY_REQUESTS_BY_EMAIL, allEntries = true) // cache eviction will also be handled in consumer
     public void removeVolunteerRequest(Long id) {
-        if (!requestRepository.existsById(id)) {
-            return; // không ném lỗi; Controller có thể trả 404 trước khi gọi service
+        if (id == null || id <= 0) {
+            return;
         }
-        requestRepository.deleteById(id);
+        // Publish delete message; validation and deletion happen in consumer
+        com.example.backend.messaging.DeleteVolunteerRequestMessage msg =
+                new com.example.backend.messaging.DeleteVolunteerRequestMessage(id, java.time.Instant.now());
+        requestPublisher.publishDelete(msg);
     }
 }

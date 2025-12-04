@@ -19,12 +19,22 @@ public class RabbitConfig {
     public static final String EXCHANGE = "volunteer.request.exchange";
     public static final String ROUTING_KEY = "volunteer.request.created";
     public static final String QUEUE = "volunteer.request.queue";
+    // Delete channel
+    public static final String DELETE_ROUTING_KEY = "volunteer.request.deleted";
+    public static final String DELETE_QUEUE = "volunteer.request.delete.queue";
     // Retry / DLQ configuration
     public static final String RETRY_EXCHANGE = "volunteer.request.retry.exchange";
     public static final String RETRY_ROUTING_KEY_1 = "volunteer.request.retry.1";
     public static final String RETRY_ROUTING_KEY_2 = "volunteer.request.retry.2";
     public static final String RETRY_QUEUE_1 = "volunteer.request.retry.queue.1"; // 5s
     public static final String RETRY_QUEUE_2 = "volunteer.request.retry.queue.2"; // 30s
+
+    // Delete-specific retry flow
+    public static final String DELETE_RETRY_EXCHANGE = "volunteer.request.delete.retry.exchange";
+    public static final String DELETE_RETRY_ROUTING_KEY_1 = "volunteer.request.delete.retry.1";
+    public static final String DELETE_RETRY_ROUTING_KEY_2 = "volunteer.request.delete.retry.2";
+    public static final String DELETE_RETRY_QUEUE_1 = "volunteer.request.delete.retry.queue.1"; // 5s
+    public static final String DELETE_RETRY_QUEUE_2 = "volunteer.request.delete.retry.queue.2"; // 30s
     public static final String DLQ = "volunteer.request.dlq";
     public static final String DLX = "volunteer.request.dlx";
 
@@ -77,6 +87,40 @@ public class RabbitConfig {
         return BindingBuilder.bind(retryQueue2).to(retryExchange).with(RETRY_ROUTING_KEY_2);
     }
 
+    // Delete retry exchange and queues
+    @Bean
+    public TopicExchange deleteRetryExchange() {
+        return new TopicExchange(DELETE_RETRY_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue deleteRetryQueue1() {
+        var args = new java.util.HashMap<String, Object>();
+        args.put("x-message-ttl", 5000); // 5 seconds
+        args.put("x-dead-letter-exchange", DELETE_RETRY_EXCHANGE);
+        args.put("x-dead-letter-routing-key", DELETE_RETRY_ROUTING_KEY_2);
+        return new Queue(DELETE_RETRY_QUEUE_1, true, false, false, args);
+    }
+
+    @Bean
+    public Binding deleteRetry1Binding(Queue deleteRetryQueue1, TopicExchange deleteRetryExchange) {
+        return BindingBuilder.bind(deleteRetryQueue1).to(deleteRetryExchange).with(DELETE_RETRY_ROUTING_KEY_1);
+    }
+
+    @Bean
+    public Queue deleteRetryQueue2() {
+        var args = new java.util.HashMap<String, Object>();
+        args.put("x-message-ttl", 30000); // 30 seconds
+        args.put("x-dead-letter-exchange", EXCHANGE);
+        args.put("x-dead-letter-routing-key", DELETE_ROUTING_KEY);
+        return new Queue(DELETE_RETRY_QUEUE_2, true, false, false, args);
+    }
+
+    @Bean
+    public Binding deleteRetry2Binding(Queue deleteRetryQueue2, TopicExchange deleteRetryExchange) {
+        return BindingBuilder.bind(deleteRetryQueue2).to(deleteRetryExchange).with(DELETE_RETRY_ROUTING_KEY_2);
+    }
+
     @Bean
     public TopicExchange dlxExchange() {
         return new TopicExchange(DLX, true, false);
@@ -95,6 +139,20 @@ public class RabbitConfig {
     @Bean
     public Binding volunteerRequestBinding(Queue volunteerRequestQueue, TopicExchange volunteerRequestExchange) {
         return BindingBuilder.bind(volunteerRequestQueue).to(volunteerRequestExchange).with(ROUTING_KEY);
+    }
+
+    @Bean
+    public Queue volunteerRequestDeleteQueue() {
+        // Simple durable queue for delete messages, dead-letter to DLX on failure
+        var args = new java.util.HashMap<String, Object>();
+        args.put("x-dead-letter-exchange", DLX);
+        args.put("x-dead-letter-routing-key", DELETE_ROUTING_KEY);
+        return new Queue(DELETE_QUEUE, true);
+    }
+
+    @Bean
+    public Binding volunteerRequestDeleteBinding(Queue volunteerRequestDeleteQueue, TopicExchange volunteerRequestExchange) {
+        return BindingBuilder.bind(volunteerRequestDeleteQueue).to(volunteerRequestExchange).with(DELETE_ROUTING_KEY);
     }
 
     @Bean
@@ -126,16 +184,19 @@ public class RabbitConfig {
                 .recoverer(new MethodInvocationRecoverer<Object>() {
                     @Override
                     public Object recover(Object[] args, Throwable cause) {
-                        // try to find VolunteerRequestMessage argument and republish to DLX
+                        // try to find known message argument and republish to DLX for manual inspection
                         if (args != null) {
                             for (Object a : args) {
-                                if (a instanceof VolunteerRequestMessage) {
-                                    try {
+                                try {
+                                    if (a instanceof VolunteerRequestMessage) {
                                         rabbitTemplate.convertAndSend(DLX, ROUTING_KEY, a);
-                                    } catch (Exception e) {
-                                        // swallow - nothing we can do here
+                                        break;
+                                    } else if (a instanceof com.example.backend.messaging.DeleteVolunteerRequestMessage) {
+                                        rabbitTemplate.convertAndSend(DLX, DELETE_ROUTING_KEY, a);
+                                        break;
                                     }
-                                    break;
+                                } catch (Exception e) {
+                                    // swallow - nothing we can do here
                                 }
                             }
                         }

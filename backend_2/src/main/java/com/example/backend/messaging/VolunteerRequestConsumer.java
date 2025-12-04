@@ -50,6 +50,12 @@ public class VolunteerRequestConsumer {
         }
         Volunteer volunteer = volunteerOpt.get();
 
+        // Prevent duplicate volunteer requests for the same post by the same volunteer
+        if (requestRepository.existsByVolunteerVolunteerEmailAndVolunteerPostId(volunteer.getVolunteerEmail(), postId)) {
+            logger.info("Skipping duplicate volunteer request: email={} postId={}", volunteer.getVolunteerEmail(), postId);
+            return; // already requested -> drop duplicate message
+        }
+
         VolunteerRequest request = new VolunteerRequest();
         request.setVolunteerPost(post);
         request.setVolunteer(volunteer);
@@ -64,6 +70,46 @@ public class VolunteerRequestConsumer {
             var cache = cacheManager.getCache(RedisCacheConfig.MY_REQUESTS_BY_EMAIL);
             if (cache != null) {
                 cache.evict(volunteer.getVolunteerEmail().toLowerCase());
+            }
+        }
+    }
+
+    @RabbitListener(queues = RabbitConfig.DELETE_QUEUE)
+    @Transactional
+    public void handleDeleteVolunteerRequest(DeleteVolunteerRequestMessage message) {
+        if (message == null || message.getRequestId() == null) {
+            return;
+        }
+        Long requestId = message.getRequestId();
+        var reqOpt = requestRepository.findById(requestId);
+        if (reqOpt.isEmpty()) {
+            logger.info("Skipping delete: request not found (id={})", requestId);
+            return;
+        }
+        VolunteerRequest req = reqOpt.get();
+        // If the request was previously accepted, decrement the post's volunteer count
+        try {
+            var post = req.getVolunteerPost();
+            if (req.getStatus() != null && req.getStatus().equalsIgnoreCase("Accepted") && post != null && post.getId() != null) {
+                int updated = postRepository.decrementVolunteerCount(post.getId());
+                if (updated > 0) {
+                    logger.info("Decremented volunteer count for post id={}", post.getId());
+                } else {
+                    logger.info("Volunteer count not decremented (already zero) for post id={}", post.getId());
+                }
+            }
+        } catch (Exception e) {
+            // Log but continue to attempt deletion of request
+            logger.warn("Failed to decrement volunteer count for request id={}: {}", requestId, e.getMessage());
+        }
+
+        requestRepository.delete(req);
+
+        // Evict cache for this volunteer's requests
+        if (cacheManager != null && req.getVolunteer() != null) {
+            var cache = cacheManager.getCache(RedisCacheConfig.MY_REQUESTS_BY_EMAIL);
+            if (cache != null) {
+                cache.evict(req.getVolunteer().getVolunteerEmail().toLowerCase());
             }
         }
     }

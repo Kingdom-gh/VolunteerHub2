@@ -18,4 +18,6 @@ public interface VolunteerRequestRepository extends JpaRepository<VolunteerReque
 
   // Count pending requests for a specific post
   long countByVolunteerPostIdAndStatusIgnoreCase(Long postId, String status);
+  // Check whether a volunteer already requested a specific post
+  boolean existsByVolunteerVolunteerEmailAndVolunteerPostId(String volunteerEmail, Long postId);
 }
