@@ -8,6 +8,7 @@ import com.example.backend.repo.VolunteerPostRepository;
 import com.example.backend.repo.VolunteerRepository;
 import com.example.backend.repo.VolunteerRequestRepository;
 import lombok.RequiredArgsConstructor;
+import com.example.backend.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -25,6 +26,7 @@ public class VolunteerRequestConsumer {
     private final VolunteerRepository volunteerRepository;
     private final VolunteerRequestRepository requestRepository;
     private final CacheManager cacheManager;
+    private final NotificationService notificationService;
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @RabbitListener(queues = RabbitConfig.QUEUE)
@@ -37,8 +39,21 @@ public class VolunteerRequestConsumer {
         Long postId = message.getPostId();
         VolunteerPost post = (postId != null) ? postRepository.findById(postId.longValue()) : null;
         if (post == null) {
-            // Post not found: ACK and drop message (business decision)
+            // Post not found: try to notify the volunteer (by email in message) and drop message
             logger.warn("Dropping volunteer request message: post not found (postId={})", postId);
+            try {
+                if (message.getVolunteerEmail() != null) {
+                    notificationService.createAndSend(
+                            message.getVolunteerEmail(),
+                            "Event Removed or Invalid",
+                            "The event you tried to register for may have been removed or the registration information is invalid.",
+                            java.util.Map.of("postId", postId),
+                            null
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to send post-not-found notification to {}: {}", message.getVolunteerEmail(), e.getMessage());
+            }
             return;
         }
 
@@ -63,10 +78,49 @@ public class VolunteerRequestConsumer {
         try {
             requestRepository.save(request);
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-            // Duplicate insert prevented by DB uniqueness -> drop silently
+            // Duplicate insert prevented by DB uniqueness -> notify volunteer that they already registered
             logger.info("Duplicate volunteer request prevented by DB (key={}): {}", message.getIdempotentKey(), ex.getMessage());
+            try {
+                String volunteerEmail = message.getVolunteerEmail();
+                String postTitle = post.getPostTitle() != null ? post.getPostTitle() : "(unknown)";
+                if (volunteerEmail != null) {
+                    notificationService.createAndSend(
+                            volunteerEmail,
+                            "Already Registered",
+                            "You have already registered for the event: " + postTitle + ".",
+                            java.util.Map.of("postId", post.getId()),
+                            "/posts/" + post.getId()
+                    );
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to send duplicate-registration notification for key={}: {}", message.getIdempotentKey(), e.getMessage());
+            }
             return;
         }
+
+        // create notifications: persist + push
+            try {
+                // notify volunteer who made the request
+                String volunteerEmail = volunteer.getVolunteerEmail();
+                String postTitle = post.getPostTitle() != null ? post.getPostTitle() : "(unknown)";
+                notificationService.createAndSend(volunteerEmail,
+                        "Request Submitted",
+                        "Your request has been submitted for post: " + postTitle,
+                        java.util.Map.of("postId", post.getId(), "requestId", request.getId()),
+                        "/posts/" + post.getId());
+
+                // notify post owner (orgEmail) if present and different
+                String ownerEmail = post.getOrgEmail();
+                if (ownerEmail != null && !ownerEmail.equalsIgnoreCase(volunteerEmail)) {
+                    notificationService.createAndSend(ownerEmail,
+                            "New Volunteer Request",
+                            "User " + volunteerEmail + " has requested to join your post: " + postTitle,
+                            java.util.Map.of("postId", post.getId(), "requestId", request.getId()),
+                            "/manage/posts/" + post.getId());
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to create/send notifications for request id={}: {}", request.getId(), e.getMessage());
+            }
 
         // Evict cache of this volunteer's requests so next read is fresh
         if (cacheManager != null) {

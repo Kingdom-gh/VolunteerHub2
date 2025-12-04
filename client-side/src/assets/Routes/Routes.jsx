@@ -12,6 +12,7 @@ import NeedVolunteer from "../Pages/NeedVolunteer/NeedVolunteer";
 import UpdateMyPost from "../Pages/UpdateMyPost/UpdateMyPost";
 import ErrorPage from "../Pages/ErrorPage/ErrorPage";
 import RequestDetails from "../Pages/ManageMyPost/RequestDetails/RequestDetails";
+import Notifications from "../Pages/ManageMyPost/Notifications";
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,14 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoutes>
             <ManageMyPost ></ManageMyPost>
+          </PrivateRoutes>
+        ),
+      },
+      {
+        path: "/notifications",
+        element: (
+          <PrivateRoutes>
+            <Notifications />
           </PrivateRoutes>
         ),
       },

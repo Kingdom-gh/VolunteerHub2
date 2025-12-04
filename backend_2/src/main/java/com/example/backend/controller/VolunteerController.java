@@ -28,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.SimpleMailMessage;
+import com.example.backend.service.NotificationService;
 
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,7 @@ public class VolunteerController {
   private final VolunteerRequestService requestService;
 
   private final VolunteerRequestRepository requestRepository;
+  private final NotificationService notificationService;
 
   @Autowired(required = false)
   private JavaMailSender mailSender;
@@ -347,6 +349,28 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
         req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
         true);
 
+    // Create notifications (best-effort)
+    try {
+      String volunteerEmail = req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null;
+      String postTitle = post.getPostTitle() != null ? post.getPostTitle() : "(unknown)";
+      if (volunteerEmail != null) {
+        notificationService.createAndSend(volunteerEmail,
+            "Request Accepted",
+            "Your request for post: " + postTitle + " has been accepted.",
+            Map.of("postId", post.getId(), "requestId", req.getId()),
+            "/posts/" + post.getId());
+      }
+      // notify organiser who approved
+      String orgEmail = post.getOrgEmail();
+      if (orgEmail != null) {
+        notificationService.createAndSend(orgEmail,
+            "Request Approved",
+            "You have approved a request for post: " + postTitle + ".",
+            Map.of("postId", post.getId(), "requestId", req.getId()),
+            "/manage/posts/" + post.getId());
+      }
+    } catch (Exception ignored) {}
+
     return ResponseEntity.ok(Map.of("success", true));
   }
 
@@ -381,6 +405,26 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     sendDecisionEmails(post.getPostTitle(), post.getOrgEmail(),
         req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
         false);
+
+    try {
+      String volunteerEmail = req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null;
+      String postTitle = post.getPostTitle() != null ? post.getPostTitle() : "(unknown)";
+      if (volunteerEmail != null) {
+        notificationService.createAndSend(volunteerEmail,
+            "Request Rejected",
+            "Your request for post: " + postTitle + " has been rejected.",
+            Map.of("postId", post.getId(), "requestId", req.getId()),
+            "/posts/" + post.getId());
+      }
+      String orgEmail = post.getOrgEmail();
+      if (orgEmail != null) {
+        notificationService.createAndSend(orgEmail,
+            "Request Rejected",
+            "You have rejected a request for post: " + postTitle + ".",
+            Map.of("postId", post.getId(), "requestId", req.getId()),
+            "/manage/posts/" + post.getId());
+      }
+    } catch (Exception ignored) {}
 
     return ResponseEntity.ok(Map.of("success", true));
   }

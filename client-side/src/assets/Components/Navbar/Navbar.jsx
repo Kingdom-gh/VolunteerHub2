@@ -73,6 +73,9 @@ const Navbar = () => {
                   <Link to='/manage-my-post'>
                     <a>Manage My Post</a>
                   </Link>
+                      <Link to='/notifications'>
+                        <a>Notifications</a>
+                      </Link>
                 </ul>
               </NavLink>
             </ul>
@@ -132,6 +135,9 @@ const Navbar = () => {
                   </li>
                   <li>
                     <Link to="/manage-my-post">Manage My Post</Link>
+                  </li>
+                  <li>
+                    <Link to="/notifications">Notifications</Link>
                   </li>
                 </ul>
               </div>
