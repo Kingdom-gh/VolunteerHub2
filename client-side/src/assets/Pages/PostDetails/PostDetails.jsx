@@ -2,11 +2,12 @@ import { Button, Typography } from "@material-tailwind/react";
 import { ScrollRestoration, useLoaderData, useNavigate } from "react-router-dom";
 import UseAuth from "../../Hook/UseAuth";
 import toast from "react-hot-toast";
+import axios from "axios";
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 
 
-const PostDetails = ({title}) => {
+const PostDetails = ({ title }) => {
   const post = useLoaderData();
   const { user } = UseAuth();
   const navigate = useNavigate();
@@ -19,21 +20,39 @@ const PostDetails = ({title}) => {
     noOfVolunteer,
     deadline,
     description,
-     orgEmail,
+    orgEmail,
     orgName
   } = post;
-  const handleVolunteer = () => {
+  const handleVolunteer = async () => {
     console.log("I want to be a volunteer !");
 
     if (noOfVolunteer <= 0) {
-      toast.error("The maximum number of volunteer is already filled !");
-      return
+      toast.error("The maximum number of volunteers is already filled!");
+      return;
     }
-    if (user?.email == orgEmail) {
-      return toast.error("You can't be a volunteer for this post !");
-    } else {
-      navigate(`/be-a-volunteer/${id}`);
+    if (!user) {
+      // Let the PrivateRoutes at target handle redirect, but give user a hint
+      toast.error("Please log in to register as a volunteer.");
+      return navigate(`/login`);
     }
+    if (user?.email === orgEmail) {
+      return toast.error("You can't be a volunteer for your own post!");
+    }
+
+    try {
+      const email = user.email;
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/get-volunteer-request/${encodeURIComponent(email)}`);
+      const existing = Array.isArray(res.data) ? res.data : [];
+      const already = existing.some((r) => r.postId === id);
+      if (already) {
+        return toast.error("You have already registered for this post.");
+      }
+    } catch (err) {
+      // If the check fails, log and allow proceeding (best-effort check)
+      console.error('Failed to check existing registration', err);
+    }
+
+    navigate(`/be-a-volunteer/${id}`);
   };
   return (
     <div>
@@ -74,13 +93,13 @@ const PostDetails = ({title}) => {
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className=" flex items-center gap-2">
                 <Typography
-                  
+
                   className="text-lg font-semibold "
                 >
                   Deadline :
                 </Typography>
                 <Typography
-                  
+
                   className="text-lg font-qs font-bold "
                 >
                   {deadline}
@@ -88,7 +107,7 @@ const PostDetails = ({title}) => {
               </div>
               <div className=" flex items-center gap-2">
                 <Typography
-    
+
                   className="text-lg font-semibold "
                 >
                   Number of Volunteer Need :
@@ -103,7 +122,7 @@ const PostDetails = ({title}) => {
             </div>
             <div className="my-4 pb-8 ">
               <Typography
-                
+
                 className="text-lg font-qs font-bold pb-4"
               >
                 Organization Information :
@@ -111,13 +130,13 @@ const PostDetails = ({title}) => {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className=" flex items-center gap-2">
                   <Typography
-                    
+
                     className="text-lg font-qs font-bold"
                   >
                     Name :
                   </Typography>
                   <Typography
-                    
+
                     className="text-lg font-qs font-bold"
                   >
                     {orgName}
@@ -125,13 +144,13 @@ const PostDetails = ({title}) => {
                 </div>
                 <div className=" flex flex-col md:flex-row  md:items-center md:gap-2">
                   <Typography
-                    
+
                     className="text-lg font-qs font-bold"
                   >
                     Email:
                   </Typography>
                   <Typography
-                    
+
                     className="text-lg font-qs font-bold"
                   >{orgEmail}
                   </Typography>

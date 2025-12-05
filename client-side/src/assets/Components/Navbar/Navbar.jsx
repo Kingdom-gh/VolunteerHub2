@@ -32,9 +32,9 @@ const Navbar = () => {
   }, [theme]);
   return (
     <div data-aos="fade-down"
-    data-aos-anchor-placement="top-bottom"
-    data-aos-easing="linear"
-    data-aos-duration="1000" className="font-qs">
+      data-aos-anchor-placement="top-bottom"
+      data-aos-easing="linear"
+      data-aos-duration="1000" className="font-qs">
       <div className="navbar  bg-base-100">
         <div className="w-1/2 justify-start md:justify-center">
           <div className="dropdown">
@@ -73,9 +73,9 @@ const Navbar = () => {
                   <Link to='/manage-my-post'>
                     <a>Manage My Post</a>
                   </Link>
-                      <Link to='/notifications'>
-                        <a>Notifications</a>
-                      </Link>
+                  <Link to='/notifications'>
+                    <a>Notifications</a>
+                  </Link>
                 </ul>
               </NavLink>
             </ul>
@@ -154,14 +154,12 @@ const Navbar = () => {
             />
 
             <span
-              className={`slider  flex h-7 w-[50px] items-center rounded-full p-1 duration-200 ${
-                isChecked ? "bg-[#212b36]" : "bg-[#CCCCCE]"
-              }`}
+              className={`slider  flex h-7 w-[50px] items-center rounded-full p-1 duration-200 ${isChecked ? "bg-[#212b36]" : "bg-[#CCCCCE]"
+                }`}
             >
               <span
-                className={`dot h-6 w-6 rounded-full bg-white duration-200 ${
-                  isChecked ? "translate-x-[28px]" : ""
-                }`}
+                className={`dot h-6 w-6 rounded-full bg-white duration-200 ${isChecked ? "translate-x-[28px]" : ""
+                  }`}
               ></span>
             </span>
           </label>

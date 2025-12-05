@@ -85,6 +85,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             var post = request.getVolunteerPost();
             var dto = new VolunteerRequestDto();
             dto.setId(request.getId());
+            dto.setPostId(post != null ? post.getId() : null);
             dto.setStatus(request.getStatus());
             if (post != null) {
                 dto.setPostTitle(post.getPostTitle());

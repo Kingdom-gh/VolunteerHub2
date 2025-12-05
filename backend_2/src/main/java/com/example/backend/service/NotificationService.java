@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -21,7 +20,7 @@ import java.util.Map;
 public class NotificationService {
 
     private final NotificationRepository repo;
-    private final SimpMessagingTemplate messaging;
+    
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -38,13 +37,7 @@ public class NotificationService {
             n.setLink(link);
             repo.save(n);
 
-            NotificationDto dto = new NotificationDto(n.getId(), n.getTitle(), n.getBody(), n.getDataJson(), n.getLink(), n.getCreatedAt());
-            // send to topic specific to recipient (client should subscribe to /topic/notifications.{email})
-            try {
-                messaging.convertAndSend("/topic/notifications." + recipientEmail.toLowerCase(), dto);
-            } catch (Exception e) {
-                logger.warn("Failed to push notification to topic for {}: {}", recipientEmail, e.getMessage());
-            }
+            // Persisted to DB. We no longer push realtime via SSE.
             return n;
         } catch (Exception ex) {
             logger.error("Failed to create/send notification: {}", ex.getMessage());
