@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
+import { useState, useEffect } from 'react';
 
 
 const PostDetails = ({ title }) => {
@@ -23,6 +24,31 @@ const PostDetails = ({ title }) => {
     orgEmail,
     orgName
   } = post;
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!user || !user.email) return setAlreadyRegistered(false);
+      setCheckingRegistration(true);
+      try {
+        const email = user.email;
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/get-volunteer-request/${encodeURIComponent(email)}`, { withCredentials: true });
+        const existing = Array.isArray(res.data) ? res.data : [];
+        const already = existing.some((r) => r.postId === id);
+        if (!cancelled) setAlreadyRegistered(Boolean(already));
+      } catch (err) {
+        console.error('Failed to check existing registration', err);
+        if (!cancelled) setAlreadyRegistered(false);
+      } finally {
+        if (!cancelled) setCheckingRegistration(false);
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [user, id]);
+
   const handleVolunteer = async () => {
     console.log("I want to be a volunteer !");
 
@@ -39,17 +65,9 @@ const PostDetails = ({ title }) => {
       return toast.error("You can't be a volunteer for your own post!");
     }
 
-    try {
-      const email = user.email;
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/get-volunteer-request/${encodeURIComponent(email)}`);
-      const existing = Array.isArray(res.data) ? res.data : [];
-      const already = existing.some((r) => r.postId === id);
-      if (already) {
-        return toast.error("You have already registered for this post.");
-      }
-    } catch (err) {
-      // If the check fails, log and allow proceeding (best-effort check)
-      console.error('Failed to check existing registration', err);
+    // Defensive check in case state is stale
+    if (alreadyRegistered) {
+      return toast.error("You have already registered for this post.");
     }
 
     navigate(`/be-a-volunteer/${id}`);
@@ -158,14 +176,18 @@ const PostDetails = ({ title }) => {
               </div>
             </div>
             <div className="mb-4 flex w-full items-center gap-3 md:w-1/2 ">
-              <Button
-                onClick={handleVolunteer}
-                color="red"
-                variant="gradient"
-                className="w-52"
-              >
-                Be A Volunteer
-              </Button>
+              {alreadyRegistered ? (
+                <Button disabled color="gray" className="w-52">You Have Registered</Button>
+              ) : (
+                <Button
+                  onClick={handleVolunteer}
+                  color="red"
+                  variant="gradient"
+                  className="w-52"
+                >
+                  Be A Volunteer
+                </Button>
+              )}
             </div>
           </div>
         </div>
