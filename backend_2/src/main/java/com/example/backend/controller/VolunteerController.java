@@ -25,9 +25,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.SimpleMailMessage;
 import com.example.backend.service.NotificationService;
 
 import java.util.List;
@@ -53,8 +50,7 @@ public class VolunteerController {
   private final VolunteerRequestRepository requestRepository;
   private final NotificationService notificationService;
 
-  @Autowired(required = false)
-  private JavaMailSender mailSender;
+  // mail sending removed per request; notifications persisted to DB only
 
   // --- JWT/AUTH ENDPOINTS ---
   @PostMapping("/jwt")
@@ -344,10 +340,7 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
       throw new ResponseStatusException(HttpStatus.CONFLICT, "Failed to decrement count");
     }
 
-    // Email notifications (best-effort)
-    sendDecisionEmails(post.getPostTitle(), post.getOrgEmail(),
-        req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
-        true);
+    // Email sending removed; notifications are persisted to DB only
 
     // Create notifications (best-effort)
     try {
@@ -402,9 +395,7 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     req.setStatus("Rejected");
     requestRepository.save(req);
 
-    sendDecisionEmails(post.getPostTitle(), post.getOrgEmail(),
-        req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null,
-        false);
+
 
     try {
       String volunteerEmail = req.getVolunteer() != null ? req.getVolunteer().getVolunteerEmail() : null;
@@ -429,29 +420,7 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     return ResponseEntity.ok(Map.of("success", true));
   }
 
-  private void sendDecisionEmails(String postTitle, String orgEmail, String volunteerEmail, boolean accepted) {
-    if (mailSender == null) return; // mail not configured
-    try {
-      String subject = "Volunteer Request " + (accepted ? "Accepted" : "Rejected");
-      String body = (accepted ? "Your request has been accepted for post: " : "Your request has been rejected for post: ")
-          + (postTitle != null ? postTitle : "(unknown)");
-      if (volunteerEmail != null && !volunteerEmail.isBlank()) {
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(volunteerEmail);
-        if (orgEmail != null && !orgEmail.isBlank()) msg.setCc(orgEmail);
-        msg.setSubject(subject);
-        msg.setText(body);
-        mailSender.send(msg);
-      }
-      if (orgEmail != null && !orgEmail.isBlank()) {
-        SimpleMailMessage msg2 = new SimpleMailMessage();
-        msg2.setTo(orgEmail);
-        msg2.setSubject(subject + " (copy)");
-        msg2.setText("You have " + (accepted ? "approved" : "rejected") + " a request for post: " + (postTitle != null ? postTitle : "(unknown)"));
-        mailSender.send(msg2);
-      }
-    } catch (Exception ignored) {}
-  }
+  // sendDecisionEmails removed — mail sending disabled
 
   @GetMapping("/")
   public Map<String, String> healthCheck() {
