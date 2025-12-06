@@ -58,6 +58,11 @@ public class VolunteerController {
       dto.setCategory(post.getCategory());
     }
 
+    Volunteer volunteer = request.getVolunteer();
+    if (volunteer != null) {
+      dto.setVolunteerEmail(volunteer.getVolunteerEmail());
+    }
+
     return dto;
   }
 

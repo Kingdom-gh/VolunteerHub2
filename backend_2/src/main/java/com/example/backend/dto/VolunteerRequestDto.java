@@ -11,6 +11,6 @@ public class VolunteerRequestDto {
   private String deadline;      // Từ VolunteerPost
   private String location;      // Từ VolunteerPost
   private String category;      // Từ VolunteerPost
-  private String status; // Từ VolunteerRequest
-   // Từ Volunteer (để gửi về client)
+  private String status;        // Từ VolunteerRequest
+  private String volunteerEmail; // Email tình nguyện viên
 }

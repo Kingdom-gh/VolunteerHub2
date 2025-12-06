@@ -97,6 +97,7 @@ const RequestDetails = ({ selectedPostId: selectedPostIdFromParent }) => {
                             <tr className="text-white raleway text-base bg-[#DE00DF]">
                                 <th></th>
                                 <th>Post Title</th>
+                                <th>Volunteer Email</th>
                                 <th>Category</th>
                                 <th>Deadline</th>
                                 <th>Location</th>
@@ -111,6 +112,7 @@ const RequestDetails = ({ selectedPostId: selectedPostIdFromParent }) => {
                                     <tr className="border border-gray-300" key={r.id}>
                                         <th className="font-semibold">{idx}</th>
                                         <td className="font-semibold p-2">{r.postTitle}</td>
+                                        <td className="font-semibold p-2">{r.volunteerEmail || 'Unknown'}</td>
                                         <td className="font-semibold p-2">{r.category}</td>
                                         <td className="font-semibold p-2">{r.deadline}</td>
                                         <td className="font-semibold p-2">{r.location}</td>
@@ -142,7 +144,7 @@ const RequestDetails = ({ selectedPostId: selectedPostIdFromParent }) => {
                             <thead>
                                 <tr className="text-white raleway text-base bg-[#DE00DF]">
                                     <th>Post Title</th>
-                                    <th>Category</th>
+                                    <th>Volunteer</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -151,7 +153,7 @@ const RequestDetails = ({ selectedPostId: selectedPostIdFromParent }) => {
                                 {data.content.map((r) => (
                                     <tr className="border border-gray-300" key={r.id}>
                                         <td className="p-2">{r.postTitle}</td>
-                                        <td className="p-2">{r.category}</td>
+                                        <td className="p-2">{r.volunteerEmail || 'Unknown'}</td>
                                         <td className="p-2">{r.status || 'Pending'}</td>
                                         <td className="p-2">
                                             {(!r.status || String(r.status).toLowerCase() === "pending") ? (
