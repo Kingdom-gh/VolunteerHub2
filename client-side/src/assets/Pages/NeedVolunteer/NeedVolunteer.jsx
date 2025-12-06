@@ -1,13 +1,12 @@
 import { Link, useNavigation } from "react-router-dom";
 import VolunteerNeedsCard from "../Homepage/VolunteerNeeds/VolunteerNeedsCard";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as React from "react";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import ViewModuleIcon from "@mui/icons-material/ViewModule";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { Button } from "@material-tailwind/react";
-import { useEffect } from "react";
 import axios from "axios";
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
@@ -17,6 +16,9 @@ const NeedVolunteer = ({ title }) => {
   const [volunteers, setVolunteers] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [isEditingPage, setIsEditingPage] = useState(false);
+  const [pageInput, setPageInput] = useState("1");
+  const pageInputRef = useRef(null);
   const [search, setSearch] = useState("");
   const [searchText, setSearchText] = useState("");
   const [showLoader, setShowLoader] = useState(true);
@@ -67,13 +69,64 @@ const NeedVolunteer = ({ title }) => {
     setView(nextView);
   };
 
+  const safeTotalPages = totalPages > 0 ? totalPages : 1;
+
+  useEffect(() => {
+    if (!isEditingPage) {
+      setPageInput(String(Math.min(page + 1, safeTotalPages)));
+    }
+  }, [page, safeTotalPages, isEditingPage]);
+
+  useEffect(() => {
+    if (isEditingPage && pageInputRef.current) {
+      pageInputRef.current.focus();
+      pageInputRef.current.select();
+    }
+  }, [isEditingPage]);
+
+  const startEditingPage = () => {
+    setPageInput(String(Math.min(page + 1, safeTotalPages)));
+    setIsEditingPage(true);
+  };
+
+  const commitPageInput = () => {
+    const parsed = parseInt(pageInput, 10);
+    if (Number.isNaN(parsed)) {
+      setPageInput(String(Math.min(page + 1, safeTotalPages)));
+      setIsEditingPage(false);
+      return;
+    }
+    const clamped = Math.min(Math.max(parsed, 1), safeTotalPages);
+    setPage(clamped - 1);
+    setIsEditingPage(false);
+    setPageInput(String(clamped));
+  };
+
+  const cancelEditingPage = () => {
+    setIsEditingPage(false);
+    setPageInput(String(Math.min(page + 1, safeTotalPages)));
+  };
+
+  const handlePageInputKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitPageInput();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEditingPage();
+    }
+  };
+
   const handleSearch = () => {
     setPage(0);
+    setIsEditingPage(false);
+    setPageInput("1");
     setSearch(searchText.trim());
   };
 
   const handleNextPage = () => {
-    if (page + 1 < totalPages) setPage(page + 1);
+    if (page + 1 < safeTotalPages) setPage(page + 1);
   };
   const handlePrevPage = () => {
     if (page > 0) setPage(page - 1);
@@ -186,14 +239,37 @@ const NeedVolunteer = ({ title }) => {
                 Prev
               </button>
               <button
-                disabled={page + 1 >= totalPages}
+                disabled={page + 1 >= safeTotalPages}
                 onClick={handleNextPage}
                 className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
               >
                 Next
               </button>
-              <span className="text-sm">
-                Page {page + 1} / {totalPages || 1}
+              <span className="text-sm flex items-center gap-1">
+                Page
+                {isEditingPage ? (
+                  <input
+                    ref={pageInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-14 rounded border border-gray-300 px-2 py-1 text-center"
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ""))}
+                    onBlur={commitPageInput}
+                    onKeyDown={handlePageInputKeyDown}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startEditingPage}
+                    className="px-2 py-1 rounded border border-transparent hover:border-gray-300 hover:bg-gray-100"
+                  >
+                    {Math.min(page + 1, safeTotalPages)}
+                  </button>
+                )}
+                /
+                {safeTotalPages}
               </span>
             </div>
 

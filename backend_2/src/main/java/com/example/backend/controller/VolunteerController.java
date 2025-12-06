@@ -21,9 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.dto.VolunteerPostDto;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.backend.service.NotificationService;
 
@@ -172,8 +169,13 @@ public ResponseEntity<?> addVolunteerPost(@RequestBody VolunteerPost post,
 
   // Lấy danh sách bài theo org email
   @GetMapping("/get-volunteer-post/{email}")
-  public List<VolunteerPostDto> getMyVolunteerPosts(@PathVariable String email) {
-    return postService.getMyVolunteerPosts(email);
+  public Page<VolunteerPostDto> getMyVolunteerPosts(@PathVariable String email,
+                                                   @RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "10") int size) {
+    int safePage = Math.max(page, 0);
+    int boundedSize = Math.min(Math.max(size, 1), 20);
+    Pageable pageable = PageRequest.of(safePage, boundedSize);
+    return postService.getMyVolunteerPosts(email, pageable);
   }
 
   // --- VOLUNTEER REQUESTS ENDPOINTS ---
@@ -202,26 +204,40 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
 
   // Lấy yêu cầu của tôi
   @GetMapping("/get-volunteer-request/{email}")
-  public List<VolunteerRequestDto> getMyVolunteerRequests(@PathVariable String email) {
-    return requestService.getMyVolunteerRequests(email);
+  public Page<VolunteerRequestDto> getMyVolunteerRequests(@PathVariable String email,
+                                                          @RequestParam(defaultValue = "0") int page,
+                                                          @RequestParam(defaultValue = "10") int size,
+                                                          @RequestParam(required = false) Long postId) {
+    int safePage = Math.max(page, 0);
+    int boundedSize = Math.min(Math.max(size, 1), 20);
+    Pageable pageable = PageRequest.of(safePage, boundedSize);
+    return requestService.getMyVolunteerRequests(email, postId, pageable);
   }
 
   // Lấy yêu cầu gửi tới các post của organizer (theo orgEmail)
   @GetMapping("/get-volunteer-requests-for-org/{email}")
-  public List<VolunteerRequestDto> getRequestsForOrganizer(@PathVariable String email,
-                                                           @AuthenticationPrincipal Volunteer current) {
+  public Page<VolunteerRequestDto> getRequestsForOrganizer(@PathVariable String email,
+                                                           @AuthenticationPrincipal Volunteer current,
+                                                           @RequestParam(defaultValue = "0") int page,
+                                                           @RequestParam(defaultValue = "10") int size) {
+    int safePage = Math.max(page, 0);
+    int boundedSize = Math.min(Math.max(size, 1), 20);
+    Pageable pageable = PageRequest.of(safePage, boundedSize);
     // Optional auth reinforce: require principal to match orgEmail
     String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
         ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
     if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
-      return List.of();
+      return Page.empty(pageable);
     }
-    var requests = requestRepository.findByVolunteerPostOrgEmail(email);
-    return requests.stream().map(request -> {
+    var pageReq = requestRepository.findByVolunteerPostOrgEmail(email, pageable);
+    return pageReq.map(request -> {
       var post = request.getVolunteerPost();
+      var volunteer = request.getVolunteer();
       var dto = new VolunteerRequestDto();
       dto.setId(request.getId());
       dto.setStatus(request.getStatus());
+      dto.setPostId(post != null ? post.getId() : null);
+      dto.setVolunteerEmail(volunteer != null ? volunteer.getVolunteerEmail() : null);
       if (post != null) {
         dto.setPostTitle(post.getPostTitle());
         dto.setOrgEmail(post.getOrgEmail());
@@ -230,24 +246,50 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
         dto.setCategory(post.getCategory());
       }
       return dto;
-    }).toList();
+    });
   }
 
   // Pending count per post for organizer
   @GetMapping("/org/{email}/posts-with-pending-count")
   public List<Map<String, Object>> getPostsWithPendingCounts(@PathVariable String email,
-                                                             @AuthenticationPrincipal Volunteer current) {
+                                                             @AuthenticationPrincipal Volunteer current,
+                                                             @RequestParam(required = false) List<Long> postIds) {
     String principalEmail = (current != null && current.getVolunteerEmail() != null && !current.getVolunteerEmail().isBlank())
         ? current.getVolunteerEmail() : (current != null ? current.getUsername() : null);
     if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
       return List.of();
     }
+    if (postIds != null && !postIds.isEmpty()) {
+      var counts = requestRepository.countPendingForPosts(email, postIds);
+      java.util.Map<Long, Long> countMap = new java.util.HashMap<>();
+      for (var row : counts) {
+        if (row.getPostId() != null) {
+          countMap.put(row.getPostId(), row.getPendingCount());
+        }
+      }
+      java.util.List<java.util.Map<String, Object>> reduced = new java.util.ArrayList<>();
+      for (Long id : postIds) {
+        if (id == null) continue;
+        var postDto = postService.getVolunteerPostDetails(id);
+        if (postDto == null || postDto.getOrgEmail() == null || !postDto.getOrgEmail().equalsIgnoreCase(email)) {
+          continue;
+        }
+        java.util.Map<String, Object> row = new java.util.HashMap<>();
+        row.put("id", id);
+        row.put("postTitle", postDto.getPostTitle());
+        row.put("pendingCount", countMap.getOrDefault(id, 0L));
+        reduced.add(row);
+      }
+      return reduced;
+    }
     var posts = postService.getMyVolunteerPosts(email);
-    return posts.stream().map(p -> Map.<String, Object>of(
-      "id", p.getId(),
-      "postTitle", p.getPostTitle(),
-      "pendingCount", requestRepository.countByVolunteerPostIdAndStatusIgnoreCase(p.getId(), "Pending")
-    )).toList();
+    return posts.stream().map(p -> {
+      java.util.Map<String, Object> row = new java.util.HashMap<>();
+      row.put("id", p.getId());
+      row.put("postTitle", p.getPostTitle());
+      row.put("pendingCount", requestRepository.countByVolunteerPostIdAndStatusIgnoreCase(p.getId(), "Pending"));
+      return row;
+    }).toList();
   }
 
   // Paged requests for a specific post (fixed page size = 10)
@@ -268,9 +310,12 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     var pageReq = requestRepository.findByVolunteerPostId(postId, pageable);
     return pageReq.map(request -> {
       var dto = new VolunteerRequestDto();
+      var post = request.getVolunteerPost();
+      var volunteer = request.getVolunteer();
       dto.setId(request.getId());
       dto.setStatus(request.getStatus());
-      var post = request.getVolunteerPost();
+      dto.setPostId(post != null ? post.getId() : null);
+      dto.setVolunteerEmail(volunteer != null ? volunteer.getVolunteerEmail() : null);
       if (post != null) {
         dto.setPostTitle(post.getPostTitle());
         dto.setOrgEmail(post.getOrgEmail());

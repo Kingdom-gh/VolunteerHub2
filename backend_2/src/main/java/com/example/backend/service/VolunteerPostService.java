@@ -30,5 +30,7 @@ public interface VolunteerPostService {
     void deleteVolunteerPost(Long id);
 
     // GET /get-volunteer-post/{email} (dùng cache)
+    Page<VolunteerPostDto> getMyVolunteerPosts(String email, Pageable pageable);
+
     List<VolunteerPostDto> getMyVolunteerPosts(String email);
 }

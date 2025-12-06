@@ -20,8 +20,10 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static com.example.backend.config.RedisCacheConfig.MY_REQUESTS_BY_EMAIL;
 
@@ -71,36 +73,56 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         throw new DownstreamServiceException("Failed to enqueue volunteer request", ex);
     }
 
+    @Override
     @Retry(name = "volunteerRequestService")
     @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "getMyVolunteerRequestsFallback")
     @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(
         cacheNames = MY_REQUESTS_BY_EMAIL,
-        key = "#email.toLowerCase()",
+        key = "#email.toLowerCase() + ':' + (#postId != null ? #postId : 'all') + ':p:' + #pageable.pageNumber",
         unless = "#result == null || #result.isEmpty()"
     )
+    public Page<VolunteerRequestDto> getMyVolunteerRequests(String email, Long postId, Pageable pageable) {
+        if (email == null || email.isBlank()) {
+            return Page.empty(pageable != null ? pageable : PageRequest.of(0, 1));
+        }
+
+        Pageable effective = pageable != null ? pageable : PageRequest.of(0, 10);
+        Page<VolunteerRequest> requests = (postId != null)
+            ? requestRepository.findByVolunteerVolunteerEmailAndVolunteerPostId(email, postId, effective)
+            : requestRepository.findByVolunteerVolunteerEmail(email, effective);
+
+        return requests.map(this::toDto);
+    }
+
+    @Deprecated
     public List<VolunteerRequestDto> getMyVolunteerRequests(String email) {
-        var requests = requestRepository.findByVolunteerVolunteerEmail(email);
-        return requests.stream().map(request -> {
-            var post = request.getVolunteerPost();
-            var dto = new VolunteerRequestDto();
-            dto.setId(request.getId());
-            dto.setPostId(post != null ? post.getId() : null);
-            dto.setStatus(request.getStatus());
-            if (post != null) {
-                dto.setPostTitle(post.getPostTitle());
-                dto.setOrgEmail(post.getOrgEmail());
-                dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
-                dto.setLocation(post.getLocation());
-                dto.setCategory(post.getCategory());
-            }
-            return dto;
-        }).toList();
+        return requestRepository.findByVolunteerVolunteerEmail(email).stream()
+            .map(this::toDto)
+            .toList();
     }
 
     @SuppressWarnings("unused")
-    private List<VolunteerRequestDto> getMyVolunteerRequestsFallback(String email, Throwable ex) {
+    private Page<VolunteerRequestDto> getMyVolunteerRequestsFallback(String email, Long postId, Pageable pageable, Throwable ex) {
         throw new DownstreamServiceException("Failed to load volunteer requests for " + email, ex);
+    }
+
+    private VolunteerRequestDto toDto(VolunteerRequest request) {
+        var dto = new VolunteerRequestDto();
+        var post = request.getVolunteerPost();
+        var volunteer = request.getVolunteer();
+        dto.setId(request.getId());
+        dto.setPostId(post != null ? post.getId() : null);
+        dto.setStatus(request.getStatus());
+        dto.setVolunteerEmail(volunteer != null ? volunteer.getVolunteerEmail() : null);
+        if (post != null) {
+            dto.setPostTitle(post.getPostTitle());
+            dto.setOrgEmail(post.getOrgEmail());
+            dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
+            dto.setLocation(post.getLocation());
+            dto.setCategory(post.getCategory());
+        }
+        return dto;
     }
 
     @Override

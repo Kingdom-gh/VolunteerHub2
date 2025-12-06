@@ -21,6 +21,8 @@ public interface VolunteerPostRepository extends JpaRepository<VolunteerPost, Lo
   // Lấy bài đăng theo email của tổ chức (API bị comment)
   List<VolunteerPost> findByOrgEmail(String orgEmail);
 
+  Page<VolunteerPost> findByOrgEmail(String orgEmail, Pageable pageable);
+
   VolunteerPost findById(long id);
   // API: update-volunteer-count/:id
   @Modifying

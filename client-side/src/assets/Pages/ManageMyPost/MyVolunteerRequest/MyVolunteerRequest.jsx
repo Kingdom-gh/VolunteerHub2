@@ -24,17 +24,44 @@ const MyVolunteerRequest = ({title}) => {
   const { user } = UseAuth();
   const navigate = useNavigate();
   const [myVolunteerRequest, setMyVolunteerRequest] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
   console.log(myVolunteerRequest);
+  useEffect(() => { setPage(0); }, [user?.email]);
+
   useEffect(() => {
     const volunteers = async () => {
-      const { data } = await axios(
-        `${import.meta.env.VITE_API_URL}/get-volunteer-request/${user?.email}`,
-        { withCredentials: true }
-      );
-      setMyVolunteerRequest(data);
+      if (!user?.email) return;
+      const url = `${import.meta.env.VITE_API_URL}/get-volunteer-request/${user.email}?page=${page}&size=${PAGE_SIZE}`;
+      const { data } = await axios(url, { withCredentials: true });
+      let content = [];
+      let tp = 0;
+      let total = 0;
+      if (Array.isArray(data)) {
+        content = data;
+        tp = 1;
+        total = data.length;
+      } else if (data && Array.isArray(data.content)) {
+        content = data.content;
+        tp = typeof data.totalPages === "number" ? data.totalPages : 1;
+        total = typeof data.totalElements === "number" ? data.totalElements : content.length;
+      }
+      setMyVolunteerRequest(content);
+      setTotalPages(tp);
+      setTotalElements(total);
     };
     volunteers();
-  }, [user?.email]);
+  }, [user?.email, page]);
+
+  const handlePrev = () => {
+    if (page > 0) setPage((p) => p - 1);
+  };
+
+  const handleNext = () => {
+    if (page + 1 < totalPages) setPage((p) => p + 1);
+  };
 
   const handleCancel = (id) => {
     Swal.fire({
@@ -63,6 +90,7 @@ const MyVolunteerRequest = ({title}) => {
               (post) => post.id !== id
             );
             setMyVolunteerRequest(remaining);
+            setTotalElements((prev) => Math.max((prev || 1) - 1, 0));
             navigate(`/manage-my-post`);
           });
       }
@@ -80,8 +108,13 @@ const MyVolunteerRequest = ({title}) => {
       {myVolunteerRequest.length > 0 ? (
         <div>
           <h2 className="text-5xl my-6 font-bold text-center mt-6">
-            Total Requests: {myVolunteerRequest.length}
+            Total Requests: {totalElements}
           </h2>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <button disabled={page === 0} onClick={handlePrev} className="btn btn-sm">Prev</button>
+            <span>Page {page + 1} / {totalPages || 1}</span>
+            <button disabled={page + 1 >= totalPages} onClick={handleNext} className="btn btn-sm">Next</button>
+          </div>
           <div className="hidden md:block">
             <div className="overflow-x-auto ">
               <table className="table border-collapse border border-gray-400">
@@ -100,7 +133,7 @@ const MyVolunteerRequest = ({title}) => {
                   {/* row 1 */}
                   {myVolunteerRequest.map((post, idx) => (
                     <tr className="border border-gray-300" key={post.id}>
-                      <th className="font-semibold">{idx + 1}</th>
+                      <th className="font-semibold">{page * PAGE_SIZE + idx + 1}</th>
                       <td className="font-semibold">{post.postTitle}</td>
                       <td className="font-semibold">{post.category}</td>
                       <td className="font-semibold">{post.deadline}</td>
@@ -134,7 +167,7 @@ const MyVolunteerRequest = ({title}) => {
                 </thead>
                 <tbody>
                   {/* row 1 */}
-                  {myVolunteerRequest.map((post) => (
+                    {myVolunteerRequest.map((post) => (
                     <tr className="border border-gray-300" key={post.id}>
                       <td>{post.postTitle}</td>
                       <td>{post.deadline}</td>

@@ -34,9 +34,15 @@ const PostDetails = ({ title }) => {
       setCheckingRegistration(true);
       try {
         const email = user.email;
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/get-volunteer-request/${encodeURIComponent(email)}`, { withCredentials: true });
-        const existing = Array.isArray(res.data) ? res.data : [];
-        const already = existing.some((r) => r.postId === id);
+        const url = `${import.meta.env.VITE_API_URL}/get-volunteer-request/${encodeURIComponent(email)}?postId=${id}&size=1`;
+        const res = await axios.get(url, { withCredentials: true });
+        let content = [];
+        if (Array.isArray(res.data)) {
+          content = res.data;
+        } else if (res.data && Array.isArray(res.data.content)) {
+          content = res.data.content;
+        }
+        const already = content.some((r) => r.postId === id);
         if (!cancelled) setAlreadyRegistered(Boolean(already));
       } catch (err) {
         console.error('Failed to check existing registration', err);

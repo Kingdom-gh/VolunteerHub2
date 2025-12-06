@@ -185,4 +185,21 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     private List<VolunteerPostDto> getMyVolunteerPostsFallback(String email, Throwable ex) {
         throw new DownstreamServiceException("Failed to load posts of org " + email, ex);
     }
+
+    @Override
+    @Retry(name = "volunteerPostService")
+    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getMyVolunteerPostsPageFallback")
+    @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
+    @Cacheable(cacheNames = MY_POSTS_BY_EMAIL,
+        key = "#email + ':p:' + #pageable.pageNumber",
+        unless = "#result == null || #result.isEmpty()")
+    public Page<VolunteerPostDto> getMyVolunteerPosts(String email, Pageable pageable) {
+        Page<VolunteerPost> page = postRepository.findByOrgEmail(email, pageable);
+        return page.map(this::toDto);
+    }
+
+    @SuppressWarnings("unused")
+    private Page<VolunteerPostDto> getMyVolunteerPostsPageFallback(String email, Pageable pageable, Throwable ex) {
+        throw new DownstreamServiceException("Failed to load posts of org " + email + " (page)" , ex);
+    }
 }
