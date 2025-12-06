@@ -9,11 +9,12 @@
 ## Chức năng chính của bản gốc:
 - Quản lí sự kiện tình nguyện, tình nguyện viên
 ## Các cải tiến
-### 1. Traefik Load Balancer
-- Load Balancer tự động phân phối traffic đến các instance đang hoạt động tốt
-- Các instance liên tục được health check bằng cách gọi API healthz(kiểm tra instance còn sống) và readyz(kiểm tra kết nối đến database, redis, mq, ...) -> nếu không hoạt động -> Load Balancer loại instance ra khỏi danh sách các instance có thể nhận request
+### 1. Intelligent Load Balancing & Resilience (Traefik)
 
-=> Horizontal scaling, tăng khả năng chịu lỗi
+- Smart Traffic Distribution: Traefik tự động điều phối tải, cô lập các node lỗi và tự động tái hòa nhập khi ổn định  
+- Performance-Aware Health Check: Thay vì chỉ kiểm tra kết nối (Ping), hệ thống giám sát P95 Latency và Thread Saturation để phát hiện sớm suy giảm hiệu năng  
+- Overload Protection: Cơ chế ngắt mạch chủ động khi Thread Pool chạm ngưỡng cảnh báo (90%), ngăn chặn hiện tượng treo hệ thống  
+- High Availability: Hỗ trợ Horizontal Scaling tin cậy, tối ưu hóa khả năng chịu lỗi và đảm bảo tính sẵn sàng cao  
 ### 2. Rate limiting 
 - Rate limiting được cấu hình trực tiếp trên traefik, chặn các request spam
 #### **Cấu hình Rate Limit**
