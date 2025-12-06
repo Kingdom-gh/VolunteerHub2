@@ -2,10 +2,10 @@
 - Bài tập lớn môn Kiến trúc phần mềm
 - Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
 ## Nhóm 15:
-- **Đỗ Đức Thắng ** - 23020158
-- **Đỗ Trung Kiên ** - 23020085
-- **Lương Vũ Thế ** - 23020159
-- **Đầu Hồng Quang ** - 23020135
+- Đỗ Đức Thắng - 23020158
+- Đỗ Trung Kiên - 23020085
+- Lương Vũ Thế - 23020159
+- Đầu Hồng Quang - 23020135
 ## Chức năng chính của bản gốc:
 - Quản lí sự kiện tình nguyện, tình nguyện viên
 ## Các cải tiến
