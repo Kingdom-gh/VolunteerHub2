@@ -154,9 +154,9 @@ services:
         - "traefik.http.services.backend.loadbalancer.healthcheck.interval=5s"
         - "traefik.http.services.backend.loadbalancer.healthcheck.timeout=2s"
 
-        # Rate Limiting (100 req/s, burst 50)
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=10"
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=10"
+        # Rate Limiting (200 req/s, burst 50)
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=200"
+        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=50"
         - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)

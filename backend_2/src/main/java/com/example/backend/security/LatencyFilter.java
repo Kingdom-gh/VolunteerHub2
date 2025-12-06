@@ -1,10 +1,11 @@
 package com.example.backend.security;
+
 import com.example.backend.entity.LatencyRecorder;
+import jakarta.servlet.*;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 @Component
@@ -19,15 +20,20 @@ public class LatencyFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
         throws IOException, ServletException {
+
+        HttpServletRequest req = (HttpServletRequest) request;
+        String uri = req.getRequestURI();
+        if (uri.equals("/healthz") || uri.equals("/readyz")) {
+            chain.doFilter(request, response);
+            return;
+        }
         long start = System.currentTimeMillis();
+        latencyRecorder.startRequest();
         try {
             chain.doFilter(request, response);
         } finally {
-            HttpServletRequest req = (HttpServletRequest) request;
-            String uri = req.getRequestURI();
-            if (!uri.contains("healthz") && !uri.contains("readyz")) {
-                latencyRecorder.record(System.currentTimeMillis() - start);
-            }
+            long duration = System.currentTimeMillis() - start;
+            latencyRecorder.endRequest(duration);
         }
     }
 }
