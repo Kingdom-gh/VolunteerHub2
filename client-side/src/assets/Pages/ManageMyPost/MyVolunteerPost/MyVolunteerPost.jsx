@@ -10,7 +10,8 @@ import Loader from "../../../Components/Loader/Loader";
 import LoadingGif from "../../../Components/Loader/LoadingGif";
 import { Helmet } from "react-helmet";
 
-const MyVolunteerPost = ({title}) => {
+
+const MyVolunteerPost = ({ title, onOpenRequests }) => {
   const { user } = UseAuth();
   const navigate = useNavigate();
   const [showLoader, setShowLoader] = useState(true);
@@ -23,6 +24,7 @@ const MyVolunteerPost = ({title}) => {
     return () => clearTimeout(timer);
   }, []);
   const [myVolunteerPost, setMyVolunteerPost] = useState([]);
+    const [pendingCounts, setPendingCounts] = useState({});
   console.log(myVolunteerPost);
   useEffect(() => {
     const volunteers = async () => {
@@ -32,7 +34,17 @@ const MyVolunteerPost = ({title}) => {
       );
       setMyVolunteerPost(data);
     };
+        const counts = async () => {
+      const { data } = await axios(
+        `${import.meta.env.VITE_API_URL}/org/${user?.email}/posts-with-pending-count`,
+        { withCredentials: true }
+      );
+      const map = {};
+      data.forEach((item) => { map[item.id] = item.pendingCount; });
+      setPendingCounts(map);
+    };
     volunteers();
+        counts();
   }, [user?.email]);
 
   const handleDelete = (id) => {
@@ -94,6 +106,7 @@ const MyVolunteerPost = ({title}) => {
                     <th>Deadline </th>
                     <th>Location</th>
                     <th>Actions</th>
+                    <th>Requests</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -116,6 +129,11 @@ const MyVolunteerPost = ({title}) => {
                           </button>
                         </div>
                       </td>
+                      <td>
+                        <div>
+                          <span onClick={() => onOpenRequests?.(post.id)} role="button" tabIndex={0} className="badge badge-sm bg-yellow-500 text-white cursor-pointer">Pending: {pendingCounts[post.id] ?? 0}</span>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -132,6 +150,7 @@ const MyVolunteerPost = ({title}) => {
                       <th>Post Title </th>
                       <th>Category</th>
                       <th>Actions</th>
+                      <th>Requests</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -148,6 +167,11 @@ const MyVolunteerPost = ({title}) => {
                             <button onClick={() => handleDelete(post.id)}>
                               <MdDelete className="size-6" />
                             </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <span onClick={() => onOpenRequests?.(post.id)} role="button" tabIndex={0} className="badge badge-sm bg-yellow-500 text-white cursor-pointer">Pending: {pendingCounts[post.id] ?? 0}</span>
                           </div>
                         </td>
                       </tr>
@@ -168,5 +192,6 @@ const MyVolunteerPost = ({title}) => {
 };
 MyVolunteerPost.propTypes = {
   title: PropTypes.object.isRequired,
+  onOpenRequests: PropTypes.func,
 };
 export default MyVolunteerPost;

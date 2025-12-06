@@ -8,7 +8,17 @@ import { toast } from "react-hot-toast";
 import { Helmet } from "react-helmet";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
+// Format date as MM/dd/yyyy (ensure leading zeros)
+const formatDateMMDDYYYY = (date) => {
+  if (!date) return null;
 
+  const d = new Date(date);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${mm}/${dd}/${yyyy}`; // "11/16/2028"
+};
 
 const AddVolunteerPost = ({ title }) => {
   const [startDate, setStartDate] = useState(new Date());
@@ -18,11 +28,15 @@ const AddVolunteerPost = ({ title }) => {
     e.preventDefault();
     const form = e.target;
     const postTitle = form.postTitle.value;
+    if (!postTitle || postTitle.trim() === "") {
+      toast.error("Post title is required");
+      return;
+    }
     const category = form.category.value;
     const location = form.location.value;
     const thumbnail = form.thumbnail.value;
     const noOfVolunteer = parseInt(form.noOfVolunteer.value);
-    const deadline = startDate.toLocaleDateString();
+    const deadline = formatDateMMDDYYYY(startDate);
     const orgName = form.orgName.value;
     const orgEmail = form.orgEmail.value;
     const description = form.description.value;
@@ -49,7 +63,11 @@ const AddVolunteerPost = ({ title }) => {
       form.reset();
       navigate("/manage-my-post")
     } catch (err) {
-      console.log(err);
+      
+      console.error(err);
+      // Prefer backend-provided message when available
+      const backendMessage = err?.response?.data?.message || err?.response?.data?.error || err.message || "Failed to add post";
+      toast.error(backendMessage);
     }
   };
   return (
@@ -214,6 +232,6 @@ const AddVolunteerPost = ({ title }) => {
   );
 };
 AddVolunteerPost.propTypes = {
-  title: PropTypes.object.isRequired,
+  title: PropTypes.string.isRequired,
 }
 export default AddVolunteerPost;
