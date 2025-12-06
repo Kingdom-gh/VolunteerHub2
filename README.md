@@ -11,12 +11,15 @@
 ## Các cải tiến
 ### 1. Traefik Load Balancer
 - Load Balancer tự động phân phối traffic đến các instance đang hoạt động tốt
-- Các instance liên tục được health check bằng cách gọi API healthz(kiểm tra instance còn sống) và readyz(kiểm tra kết nối đến database, redis, mq, ...) -> nếu không hoạt động -> Load Balancer loại instance ra khỏi danh sách các instance có thể nhận request  
+- Các instance liên tục được health check bằng cách gọi API healthz(kiểm tra instance còn sống) và readyz(kiểm tra kết nối đến database, redis, mq, ...) -> nếu không hoạt động -> Load Balancer loại instance ra khỏi danh sách các instance có thể nhận request
+
 => Horizontal scaling, tăng khả năng chịu lỗi
 ### 2. Rate limiting 
 - Rate limiting được cấu hình trực tiếp trên traefik, chặn các request spam
+
 => Chống DoS ở tầng ứng dụng, ngăn backend bị quá tải
 ### 3. Thêm ORM, index cho DB
+
 => Tăng tốc độ cho những truy vấn đọc hay được sử dụng, tăng bảo mật, chống SQL injection
 
 ## Cài đặt và chạy dự án
