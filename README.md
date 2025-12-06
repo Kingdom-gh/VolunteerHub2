@@ -1,6 +1,6 @@
 # VolunteerHub2 - (Improved version)
-Bài tập lớn môn Kiến trúc phần mềm
-Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
+- Bài tập lớn môn Kiến trúc phần mềm
+- Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
 ## Nhóm 15:
 - **Đỗ Đức Thắng ** - 23020158
 - **Đỗ Trung Kiên ** - 23020085
