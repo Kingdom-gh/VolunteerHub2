@@ -14,7 +14,7 @@
 - Smart Traffic Distribution: Traefik tự động điều phối tải, cô lập các node lỗi và tự động tái hòa nhập khi ổn định  
 - Performance-Aware Health Check: Thay vì chỉ kiểm tra kết nối (Ping), hệ thống giám sát P95 Latency và Thread Saturation để phát hiện sớm suy giảm hiệu năng  
 - Overload Protection: Cơ chế ngắt mạch chủ động khi Thread Pool chạm ngưỡng cảnh báo (90%), ngăn chặn hiện tượng treo hệ thống  
-- High Availability: Hỗ trợ Horizontal Scaling tin cậy, tối ưu hóa khả năng chịu lỗi và đảm bảo tính sẵn sàng cao  
+=> Hỗ trợ Horizontal Scaling tin cậy, tối ưu hóa khả năng chịu lỗi và đảm bảo tính sẵn sàng cao  
 ### 2. Rate limiting 
 - Rate limiting được cấu hình trực tiếp trên traefik, chặn các request spam
 #### **Cấu hình Rate Limit**
