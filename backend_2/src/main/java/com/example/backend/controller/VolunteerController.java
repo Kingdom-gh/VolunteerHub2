@@ -11,12 +11,14 @@ import com.example.backend.repo.VolunteerRequestRepository;
 import com.example.backend.security.JwtService;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.time.LocalDateTime;
@@ -40,6 +42,35 @@ public class VolunteerController {
 
   @Autowired
   private JwtService jwtService; // Dịch vụ xử lý JWT
+
+  private VolunteerRequestDto toVolunteerRequestDto(VolunteerRequest request) {
+    VolunteerRequestDto dto = new VolunteerRequestDto();
+    dto.setId(request.getId());
+    dto.setStatus(request.getStatus());
+
+    VolunteerPost post = request.getVolunteerPost();
+    if (post != null) {
+      dto.setPostId(post.getId());
+      dto.setPostTitle(post.getPostTitle());
+      dto.setOrgEmail(post.getOrgEmail());
+      dto.setDeadline(post.getDeadline() != null ? post.getDeadline().toString() : null);
+      dto.setLocation(post.getLocation());
+      dto.setCategory(post.getCategory());
+    }
+
+    return dto;
+  }
+
+  private String resolvePrincipalEmail(Volunteer current) {
+    if (current == null) {
+      return null;
+    }
+    String email = current.getVolunteerEmail();
+    if (email != null && !email.isBlank()) {
+      return email;
+    }
+    return current.getUsername();
+  }
 
   // --- JWT/AUTH ENDPOINTS ---
   @PostMapping("/jwt")
@@ -237,25 +268,7 @@ public class VolunteerController {
     List<VolunteerRequest> requests = requestRepository.findByVolunteerVolunteerEmail(authenticatedEmail);
 
     // 3. Chuyển đổi sang DTO
-    return requests.stream()
-            .map(request -> {
-              // Tải Entity Post LAZY (hoặc sử dụng nếu đã EAGER)
-              VolunteerPost post = request.getVolunteerPost();
-
-              VolunteerRequestDto dto = new VolunteerRequestDto();
-              dto.setId(request.getId());
-              dto.setStatus(request.getStatus());
-
-              // Ánh xạ các trường từ VolunteerPost
-              dto.setPostTitle(post.getPostTitle());
-              dto.setOrgEmail(post.getOrgEmail());
-              dto.setDeadline(post.getDeadline().toString()); // Cần xử lý định dạng Date/LocalDate
-              dto.setLocation(post.getLocation());
-              dto.setCategory(post.getCategory());
-
-              return dto;
-            })
-            .toList();
+    return requests.stream().map(this::toVolunteerRequestDto).toList();
   }
 
 
@@ -266,6 +279,147 @@ public class VolunteerController {
       return ResponseEntity.notFound().build();
     }
     requestRepository.deleteById(id);
+    return ResponseEntity.ok(Map.of("success", true));
+  }
+
+  @GetMapping("/get-volunteer-requests-for-org/{email}")
+  public List<VolunteerRequestDto> getRequestsForOrganizer(@PathVariable String email,
+                                                           @AuthenticationPrincipal Volunteer current) {
+    String principalEmail = resolvePrincipalEmail(current);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
+      return List.of();
+    }
+    List<VolunteerRequest> requests = requestRepository.findByVolunteerPostOrgEmail(email);
+    return requests.stream().map(this::toVolunteerRequestDto).toList();
+  }
+
+  @GetMapping("/org/{email}/posts-with-pending-count")
+  public List<Map<String, Object>> getPostsWithPendingCounts(@PathVariable String email,
+                                                             @AuthenticationPrincipal Volunteer current) {
+    String principalEmail = resolvePrincipalEmail(current);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(email)) {
+      return List.of();
+    }
+    return postRepository.findByOrgEmail(email).stream()
+        .map(post -> Map.<String, Object>of(
+            "id", post.getId(),
+            "postTitle", post.getPostTitle(),
+            "pendingCount", requestRepository.countByVolunteerPostIdAndStatusIgnoreCase(post.getId(), "Pending")
+        ))
+        .toList();
+  }
+
+  @GetMapping("/post/{postId}/requests")
+  public Page<VolunteerRequestDto> getRequestsForPost(@PathVariable Long postId,
+                                                      @RequestParam(defaultValue = "0") int page,
+                                                      @AuthenticationPrincipal Volunteer current) {
+    Optional<VolunteerPost> postOpt = postRepository.findById(postId);
+    String principalEmail = resolvePrincipalEmail(current);
+    if (postOpt.isEmpty() || principalEmail == null || !principalEmail.equalsIgnoreCase(postOpt.get().getOrgEmail())) {
+      return Page.empty();
+    }
+
+    final int PAGE_SIZE = 10;
+    int safePage = Math.max(page, 0);
+    int offset = safePage * PAGE_SIZE;
+
+    List<VolunteerRequest> requests = requestRepository.findByVolunteerPostId(postId, PAGE_SIZE, offset);
+    long total = requestRepository.countByVolunteerPostId(postId);
+    List<VolunteerRequestDto> dtos = requests.stream().map(this::toVolunteerRequestDto).toList();
+
+    return new PageImpl<>(dtos, PageRequest.of(safePage, PAGE_SIZE), total);
+  }
+
+  @PutMapping("/volunteer-request/{id}/approve")
+  @Transactional
+  public ResponseEntity<?> approveVolunteerRequest(@PathVariable Long id,
+                                                   @AuthenticationPrincipal Volunteer current) {
+    Optional<VolunteerRequest> opt = requestRepository.findByIdWithPost(id);
+    if (opt.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
+    VolunteerRequest request = opt.get();
+    VolunteerPost post = request.getVolunteerPost();
+    if (post == null) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Missing post for request"));
+    }
+
+    Optional<VolunteerPost> refreshedPostOpt = postRepository.findById(post.getId());
+    VolunteerPost refreshedPost = refreshedPostOpt.orElse(post);
+
+    String principalEmail = resolvePrincipalEmail(current);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(refreshedPost.getOrgEmail())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(Map.of("message", "Only post owner can approve"));
+    }
+
+    String currentStatus = request.getStatus();
+    if (currentStatus != null && (currentStatus.equalsIgnoreCase("Accepted") || currentStatus.equalsIgnoreCase("Rejected"))) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Request is already decided"));
+    }
+
+    Integer slots = refreshedPost.getNoOfVolunteer();
+    if (slots != null && slots <= 0) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "No available slots"));
+    }
+
+    int updatedStatus = requestRepository.updateStatus(id, "Accepted");
+    if (updatedStatus == 0) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("message", "Failed to update status"));
+    }
+
+    int updatedCount = postRepository.decrementVolunteerCount(refreshedPost.getId());
+    if (updatedCount == 0) {
+      requestRepository.updateStatus(id, currentStatus != null ? currentStatus : "Pending");
+      return ResponseEntity.status(HttpStatus.CONFLICT)
+          .body(Map.of("message", "Failed to decrement count"));
+    }
+
+    return ResponseEntity.ok(Map.of("success", true));
+  }
+
+  @PutMapping("/volunteer-request/{id}/reject")
+  @Transactional
+  public ResponseEntity<?> rejectVolunteerRequest(@PathVariable Long id,
+                                                  @AuthenticationPrincipal Volunteer current) {
+    Optional<VolunteerRequest> opt = requestRepository.findByIdWithPost(id);
+    if (opt.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
+    VolunteerRequest request = opt.get();
+    VolunteerPost post = request.getVolunteerPost();
+    if (post == null) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Missing post for request"));
+    }
+
+    Optional<VolunteerPost> refreshedPostOpt = postRepository.findById(post.getId());
+    VolunteerPost refreshedPost = refreshedPostOpt.orElse(post);
+
+    String principalEmail = resolvePrincipalEmail(current);
+    if (principalEmail == null || !principalEmail.equalsIgnoreCase(refreshedPost.getOrgEmail())) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN)
+          .body(Map.of("message", "Only post owner can reject"));
+    }
+
+    String currentStatus = request.getStatus();
+    if (currentStatus != null && (currentStatus.equalsIgnoreCase("Accepted") || currentStatus.equalsIgnoreCase("Rejected"))) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("message", "Request is already decided"));
+    }
+
+    int updated = requestRepository.updateStatus(id, "Rejected");
+    if (updated == 0) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("message", "Failed to update status"));
+    }
+
     return ResponseEntity.ok(Map.of("success", true));
   }
 

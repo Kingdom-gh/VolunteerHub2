@@ -1,6 +1,7 @@
 package com.example.backend.repo;
 
 
+import com.example.backend.entity.Volunteer;
 import com.example.backend.entity.VolunteerPost;
 import com.example.backend.entity.VolunteerRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,8 +13,11 @@ import org.springframework.stereotype.Repository;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.LocalDate;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
+
 
 @Repository
 public class VolunteerRequestRepository {
@@ -23,6 +27,41 @@ public class VolunteerRequestRepository {
   public VolunteerRequestRepository(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
+
+  private VolunteerRequest mapRequest(ResultSet rs) throws SQLException {
+    VolunteerPost post = new VolunteerPost();
+    post.setId(rs.getLong("p_id"));
+    post.setPostTitle(rs.getString("p_postTitle"));
+    post.setCategory(rs.getString("p_category"));
+    java.sql.Date deadline = rs.getDate("p_deadline");
+    post.setDeadline(deadline != null ? deadline.toLocalDate() : null);
+    post.setLocation(rs.getString("p_location"));
+    post.setDescription(rs.getString("p_description"));
+    post.setThumbnail(rs.getString("p_thumbnail"));
+    int noOfVolunteer = rs.getInt("p_noOfVolunteer");
+    post.setNoOfVolunteer(rs.wasNull() ? null : noOfVolunteer);
+    post.setOrgName(rs.getString("p_orgName"));
+    post.setOrgEmail(rs.getString("p_orgEmail"));
+
+    VolunteerRequest request = new VolunteerRequest();
+    request.setId(rs.getLong("r_id"));
+    Timestamp ts = rs.getTimestamp("r_requestDate");
+    request.setRequestDate(ts != null ? ts.toLocalDateTime() : null);
+    request.setSuggestion(rs.getString("r_suggestion"));
+    request.setStatus(rs.getString("r_status"));
+    request.setVolunteerPost(post);
+
+    String volunteerEmail = rs.getString("v_email");
+    if (volunteerEmail != null) {
+      Volunteer volunteer = new Volunteer();
+      volunteer.setVolunteerEmail(volunteerEmail);
+      request.setVolunteer(volunteer);
+    }
+
+    return request;
+  }
+
+  private final RowMapper<VolunteerRequest> REQUEST_MAPPER = (rs, i) -> mapRequest(rs);
 
   public VolunteerRequest save(VolunteerRequest request) {
     if (request.getVolunteerPost() == null || request.getVolunteerPost().getId() == null) {
@@ -53,33 +92,14 @@ public class VolunteerRequestRepository {
     String sql =
       "SELECT r.id AS r_id, r.requestDate AS r_requestDate, r.suggestion AS r_suggestion, r.status AS r_status, " +
       "p.id AS p_id, p.postTitle AS p_postTitle, p.category AS p_category, p.deadline AS p_deadline, " +
-      "p.location AS p_location, p.orgEmail AS p_orgEmail " +
+      "p.location AS p_location, p.description AS p_description, p.thumbnail AS p_thumbnail, " +
+      "p.noOfVolunteer AS p_noOfVolunteer, p.orgName AS p_orgName, p.orgEmail AS p_orgEmail, " +
+      "r.volunteerEmail AS v_email " +
       "FROM volunteer_request r " +
       "JOIN volunteer_post p ON p.id = r.postId " +
       "WHERE r.volunteerEmail = ? " +
       "ORDER BY r.id DESC";
-
-    RowMapper<VolunteerRequest> mapper = (rs, i) -> {
-      VolunteerPost p = new VolunteerPost();
-      p.setId(rs.getLong("p_id"));
-      p.setPostTitle(rs.getString("p_postTitle"));
-      p.setCategory(rs.getString("p_category"));
-      java.sql.Date d = rs.getDate("p_deadline");
-      p.setDeadline(d != null ? d.toLocalDate() : null);
-      p.setLocation(rs.getString("p_location"));
-      p.setOrgEmail(rs.getString("p_orgEmail"));
-
-      VolunteerRequest r = new VolunteerRequest();
-      r.setId(rs.getLong("r_id"));
-      Timestamp ts = rs.getTimestamp("r_requestDate");
-      r.setRequestDate(ts != null ? ts.toLocalDateTime() : null);
-      r.setSuggestion(rs.getString("r_suggestion"));
-      r.setStatus(rs.getString("r_status"));
-      r.setVolunteerPost(p);
-      return r;
-    };
-
-    return jdbc.query(sql, mapper, volunteerEmail);
+    return jdbc.query(sql, REQUEST_MAPPER, volunteerEmail);
   }
 
   public boolean existsById(Long id) {
@@ -89,5 +109,71 @@ public class VolunteerRequestRepository {
 
   public void deleteById(Long id) {
     jdbc.update("DELETE FROM volunteer_request WHERE id = ?", id);
+  }
+
+  public Optional<VolunteerRequest> findByIdWithPost(Long id) {
+    String sql =
+      "SELECT r.id AS r_id, r.requestDate AS r_requestDate, r.suggestion AS r_suggestion, r.status AS r_status, " +
+      "r.volunteerEmail AS v_email, " +
+      "p.id AS p_id, p.postTitle AS p_postTitle, p.category AS p_category, p.deadline AS p_deadline, " +
+      "p.location AS p_location, p.description AS p_description, p.thumbnail AS p_thumbnail, " +
+      "p.noOfVolunteer AS p_noOfVolunteer, p.orgName AS p_orgName, p.orgEmail AS p_orgEmail " +
+      "FROM volunteer_request r " +
+      "JOIN volunteer_post p ON p.id = r.postId " +
+      "WHERE r.id = ?";
+    List<VolunteerRequest> list = jdbc.query(sql, REQUEST_MAPPER, id);
+    return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
+  }
+
+  public List<VolunteerRequest> findByVolunteerPostOrgEmail(String orgEmail) {
+    String sql =
+      "SELECT r.id AS r_id, r.requestDate AS r_requestDate, r.suggestion AS r_suggestion, r.status AS r_status, " +
+      "r.volunteerEmail AS v_email, " +
+      "p.id AS p_id, p.postTitle AS p_postTitle, p.category AS p_category, p.deadline AS p_deadline, " +
+      "p.location AS p_location, p.description AS p_description, p.thumbnail AS p_thumbnail, " +
+      "p.noOfVolunteer AS p_noOfVolunteer, p.orgName AS p_orgName, p.orgEmail AS p_orgEmail " +
+      "FROM volunteer_request r " +
+      "JOIN volunteer_post p ON p.id = r.postId " +
+      "WHERE p.orgEmail = ? " +
+      "ORDER BY r.id DESC";
+    return jdbc.query(sql, REQUEST_MAPPER, orgEmail);
+  }
+
+  public List<VolunteerRequest> findByVolunteerPostId(Long postId, int limit, int offset) {
+    String sql =
+      "SELECT r.id AS r_id, r.requestDate AS r_requestDate, r.suggestion AS r_suggestion, r.status AS r_status, " +
+      "r.volunteerEmail AS v_email, " +
+      "p.id AS p_id, p.postTitle AS p_postTitle, p.category AS p_category, p.deadline AS p_deadline, " +
+      "p.location AS p_location, p.description AS p_description, p.thumbnail AS p_thumbnail, " +
+      "p.noOfVolunteer AS p_noOfVolunteer, p.orgName AS p_orgName, p.orgEmail AS p_orgEmail " +
+      "FROM volunteer_request r " +
+      "JOIN volunteer_post p ON p.id = r.postId " +
+      "WHERE r.postId = ? " +
+      "ORDER BY r.id DESC " +
+      "LIMIT ? OFFSET ?";
+    return jdbc.query(sql, REQUEST_MAPPER, postId, limit, offset);
+  }
+
+  public long countByVolunteerPostId(Long postId) {
+    Long total = jdbc.queryForObject(
+      "SELECT COUNT(1) FROM volunteer_request WHERE postId = ?",
+      Long.class,
+      postId
+    );
+    return total != null ? total : 0L;
+  }
+
+  public long countByVolunteerPostIdAndStatusIgnoreCase(Long postId, String status) {
+    Long total = jdbc.queryForObject(
+      "SELECT COUNT(1) FROM volunteer_request WHERE postId = ? AND LOWER(status) = LOWER(?)",
+      Long.class,
+      postId,
+      status
+    );
+    return total != null ? total : 0L;
+  }
+
+  public int updateStatus(Long id, String status) {
+    return jdbc.update("UPDATE volunteer_request SET status = ? WHERE id = ?", status, id);
   }
 }

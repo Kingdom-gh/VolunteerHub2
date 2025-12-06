@@ -39,7 +39,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-            target: dev
+            #target: dev
         image: volunteerhub-bad-backend:local
         container_name: volunteerhub-bad-backend
         volumes:
