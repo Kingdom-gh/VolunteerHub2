@@ -19,6 +19,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -32,6 +33,16 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     private final VolunteerPostRepository postRepository;
     private final PostCacheEvictHelper postCacheEvictHelper;
 
+    private static final String LEGACY_DEFAULT_THUMBNAIL = "https://demofree.sirv.com/nope-not-here.jpg";
+    private static final Map<String, String> CATEGORY_THUMBNAILS = Map.of(
+        "healthcare", "https://files.catbox.moe/chl5ml.png",
+        "environmental", "https://files.catbox.moe/rlwncl.jpg",
+        "education", "https://files.catbox.moe/g7r16r.jpg",
+        "social service", "https://files.catbox.moe/ywewl6.webp",
+        "animal welfare", "https://files.catbox.moe/0ebgtw.webp",
+        "food security", "https://files.catbox.moe/ywewl6.webp"
+    );
+
     private VolunteerPostDto toDto(VolunteerPost post) {
         if (post == null) {
             return null;
@@ -43,11 +54,27 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
             post.getDeadline(),
             post.getLocation(),
             post.getDescription(),
-            post.getThumbnail(),
+            resolveThumbnail(post.getThumbnail(), post.getCategory()),
             post.getNoOfVolunteer(),
             post.getOrgName(),
             post.getOrgEmail()
         );
+    }
+
+    private String resolveThumbnail(String currentThumbnail, String category) {
+        if (currentThumbnail != null) {
+            String trimmed = currentThumbnail.trim();
+            if (!trimmed.isEmpty() && !LEGACY_DEFAULT_THUMBNAIL.equalsIgnoreCase(trimmed)) {
+                return trimmed;
+            }
+        }
+        if (category != null) {
+            String mapped = CATEGORY_THUMBNAILS.get(category.trim().toLowerCase());
+            if (mapped != null) {
+                return mapped;
+            }
+        }
+        return LEGACY_DEFAULT_THUMBNAIL;
     }
 
     @Override
@@ -126,6 +153,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     // ✅ Bù mặc định để tránh NOT NULL
         if (post.getNoOfVolunteer() == null) post.setNoOfVolunteer(0);
+        post.setThumbnail(resolveThumbnail(post.getThumbnail(), post.getCategory()));
+
         var saved = postRepository.saveAndFlush(post);
         return saved.getId();
     }
@@ -153,6 +182,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
         existing.setCategory(updatedData.getCategory());
         existing.setThumbnail(updatedData.getThumbnail());
         existing.setDescription(updatedData.getDescription());
+        existing.setThumbnail(resolveThumbnail(existing.getThumbnail(), existing.getCategory()));
         // Lưu ý: orgEmail/orgName/noOfVolunteer KHÔNG cập nhật ở API này
         postRepository.save(existing);
         postCacheEvictHelper.evictPostById(id);
