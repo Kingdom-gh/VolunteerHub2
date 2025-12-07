@@ -24,27 +24,69 @@ const MyVolunteerPost = ({ title, onOpenRequests }) => {
   }, []);
   const [myVolunteerPost, setMyVolunteerPost] = useState([]);
   const [pendingCounts, setPendingCounts] = useState({});
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
   console.log(myVolunteerPost);
+  useEffect(() => { setPage(0); }, [user?.email]);
+
+  const fetchPendingCounts = async (postsForPage) => {
+    if (!user?.email) {
+      setPendingCounts({});
+      return;
+    }
+    const ids = (postsForPage || []).map((item) => item?.id).filter(Boolean);
+    if (ids.length === 0) {
+      setPendingCounts({});
+      return;
+    }
+    const params = ids.map((id) => `postIds=${id}`).join("&");
+    const { data } = await axios(
+      `${import.meta.env.VITE_API_URL}/org/${user.email}/posts-with-pending-count?${params}`,
+      { withCredentials: true }
+    );
+    const map = {};
+    (data || []).forEach((item) => { map[item.id] = item.pendingCount ?? 0; });
+    setPendingCounts(map);
+  };
+
   useEffect(() => {
     const volunteers = async () => {
-      const { data } = await axios(
-        `${import.meta.env.VITE_API_URL}/get-volunteer-post/${user?.email}`,
-        { withCredentials: true }
-      );
-      setMyVolunteerPost(data);
-    };
-    const counts = async () => {
-      const { data } = await axios(
-        `${import.meta.env.VITE_API_URL}/org/${user?.email}/posts-with-pending-count`,
-        { withCredentials: true }
-      );
-      const map = {};
-      data.forEach((item) => { map[item.id] = item.pendingCount; });
-      setPendingCounts(map);
+      if (!user?.email) return;
+      const url = `${import.meta.env.VITE_API_URL}/get-volunteer-post/${user.email}?page=${page}&size=${PAGE_SIZE}`;
+      const { data } = await axios(url, { withCredentials: true });
+      let content = [];
+      let tp = 0;
+      let total = 0;
+      if (Array.isArray(data)) {
+        content = data;
+        tp = 1;
+        total = data.length;
+      } else if (data && Array.isArray(data.content)) {
+        content = data.content;
+        tp = typeof data.totalPages === "number" ? data.totalPages : 1;
+        total = typeof data.totalElements === "number" ? data.totalElements : content.length;
+      }
+      setMyVolunteerPost(content);
+      setTotalPages(tp);
+      setTotalElements(total);
+      await fetchPendingCounts(content);
     };
     volunteers();
-    counts();
-  }, [user?.email]);
+  }, [user?.email, page]);
+
+  const handlePrevPage = () => {
+    if (page > 0) {
+      setPage((p) => p - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page + 1 < totalPages) {
+      setPage((p) => p + 1);
+    }
+  };
 
   const handleDelete = (id) => {
     Swal.fire({
@@ -71,6 +113,7 @@ const MyVolunteerPost = ({ title, onOpenRequests }) => {
             }
             const remaining = myVolunteerPost.filter((post) => post.id !== id);
             setMyVolunteerPost(remaining);
+            fetchPendingCounts(remaining);
             navigate(`/manage-my-post`);
           });
       }
@@ -93,8 +136,17 @@ const MyVolunteerPost = ({ title, onOpenRequests }) => {
       {myVolunteerPost.length > 0 ? (
         <div>
           <h2 className="text-5xl font-bold my-6 text-center mt-6">
-            Total Posts: {myVolunteerPost.length}
+            Total Posts: {totalElements}
           </h2>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <button disabled={page === 0} onClick={handlePrevPage} className="btn btn-sm">
+              Prev
+            </button>
+            <span>Page {page + 1} / {totalPages || 1}</span>
+            <button disabled={page + 1 >= totalPages} onClick={handleNextPage} className="btn btn-sm">
+              Next
+            </button>
+          </div>
           <div className="hidden md:block">
             <div className="overflow-x-auto ">
               <table className="table border-collapse border border-gray-400">
@@ -114,7 +166,7 @@ const MyVolunteerPost = ({ title, onOpenRequests }) => {
                   {/* row 1 */}
                   {myVolunteerPost.map((post, idx) => (
                     <tr className="border border-gray-300" key={post.id}>
-                      <th className="font-semibold">{idx + 1}</th>
+                      <th className="font-semibold">{page * PAGE_SIZE + idx + 1}</th>
                       <td className="font-semibold">{post.postTitle}</td>
                       <td className="font-semibold">{post.category}</td>
                       <td className="font-semibold">{post.deadline}</td>

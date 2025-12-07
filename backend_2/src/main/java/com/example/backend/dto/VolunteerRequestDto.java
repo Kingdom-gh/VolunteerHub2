@@ -1,6 +1,5 @@
 package com.example.backend.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.io.Serializable;
 
@@ -15,6 +14,6 @@ public class VolunteerRequestDto implements Serializable {
   private String deadline;      // Từ VolunteerPost
   private String location;      // Từ VolunteerPost
   private String category;      // Từ VolunteerPost
-  private String status; // Từ VolunteerRequest
-   // Từ Volunteer (để gửi về client)
+  private String status;        // Từ VolunteerRequest
+  private String volunteerEmail; // Từ Volunteer (để gửi về client)
 }
