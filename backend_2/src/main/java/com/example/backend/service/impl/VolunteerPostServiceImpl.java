@@ -14,7 +14,6 @@ import com.example.backend.dto.VolunteerPostDto;
 import java.util.stream.Collectors;
 import com.example.backend.exception.BadRequestException;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
@@ -52,7 +51,6 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @Override
     @Retry(name = "volunteerPostService")
-    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getLatestVolunteersFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = HOME_TOP6, key = "'top6'",
         unless = "#result == null || #result.isEmpty()")
@@ -63,14 +61,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
             .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unused")
-    private List<VolunteerPostDto> getLatestVolunteersFallback(Throwable ex) {
-        throw new DownstreamServiceException("Failed to load latest volunteer posts", ex);
-    }
-
     @Override
     @Retry(name = "volunteerPostService")
-    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getAllVolunteersFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POSTS,
         key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase()) + ':p:' + #pageable.pageNumber",
@@ -85,25 +77,14 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
         return page.map(this::toDto);
     }
 
-    @SuppressWarnings("unused")
-        private Page<VolunteerPostDto> getAllVolunteersFallback(String search, Pageable pageable, Throwable ex) {
-            throw new DownstreamServiceException("Failed to load volunteer posts list", ex);
-        }
-
     @Override
     @Retry(name = "volunteerPostService")
-    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getVolunteerPostDetailsFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POST_BY_ID, key = "#id", unless = "#result == null")
     public VolunteerPostDto getVolunteerPostDetails(Long id) {
         return postRepository.findById(id)
             .map(this::toDto)
             .orElse(null);
-    }
-
-    @SuppressWarnings("unused")
-    private VolunteerPostDto getVolunteerPostDetailsFallback(Long id, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load volunteer post details for id=" + id, ex);
     }
 
     @Override
@@ -170,7 +151,6 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
 
     @Override
     @Retry(name = "volunteerPostService")
-    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getMyVolunteerPostsFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = MY_POSTS_BY_EMAIL, key = "#email",
         unless = "#result == null || #result.isEmpty()")
@@ -181,14 +161,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
             .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unused")
-    private List<VolunteerPostDto> getMyVolunteerPostsFallback(String email, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load posts of org " + email, ex);
-    }
-
     @Override
     @Retry(name = "volunteerPostService")
-    @CircuitBreaker(name = "volunteerPostService", fallbackMethod = "getMyVolunteerPostsPageFallback")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = MY_POSTS_BY_EMAIL,
         key = "#email + ':p:' + #pageable.pageNumber",
@@ -196,10 +170,5 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     public Page<VolunteerPostDto> getMyVolunteerPosts(String email, Pageable pageable) {
         Page<VolunteerPost> page = postRepository.findByOrgEmail(email, pageable);
         return page.map(this::toDto);
-    }
-
-    @SuppressWarnings("unused")
-    private Page<VolunteerPostDto> getMyVolunteerPostsPageFallback(String email, Pageable pageable, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load posts of org " + email + " (page)" , ex);
     }
 }

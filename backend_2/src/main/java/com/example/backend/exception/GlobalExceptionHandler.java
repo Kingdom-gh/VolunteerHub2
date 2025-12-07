@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 
 /**
  * Toàn bộ exception ném ra trong hệ thống sẽ đi qua đây
@@ -127,21 +126,6 @@ public class GlobalExceptionHandler {
         HttpStatus.SERVICE_UNAVAILABLE,
         "DOWNSTREAM_UNAVAILABLE",
         ex.getMessage()
-    );
-    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
-  }
-
-  // 503 - CircuitBreaker đã mở (không cho gọi xuống service nữa)
-  @ExceptionHandler(CallNotPermittedException.class)
-  public ResponseEntity<ErrorResponse> handleCircuitOpen(
-      CallNotPermittedException ex,
-      HttpServletRequest request
-  ) {
-    ErrorResponse body = buildErrorResponse(
-        request,
-        HttpStatus.SERVICE_UNAVAILABLE,
-        "CIRCUIT_OPEN",
-        "Service is temporarily unavailable. Please try again later."
     );
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
   }
