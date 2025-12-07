@@ -11,8 +11,8 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     restart: unless-stopped
     # Resource limits (leave headroom for JMeter)
-    cpus: 0.25
-    mem_limit: 256m
+    cpus: 0.2
+    mem_limit: 64m
     pids_limit: 256
 
   # Message broker
@@ -29,7 +29,7 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
     cpus: 0.5
-    mem_limit: 512m
+    mem_limit: 256m
     pids_limit: 512
 
   # Database  
@@ -53,8 +53,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    cpus: 0.75
-    mem_limit: 1500m
+    cpus: 1
+    mem_limit: 500m
     pids_limit: 512
 
   adminer:
@@ -96,13 +96,11 @@ services:
       - ./:/workspace
       - maven-repo:/root/.m2
     depends_on:
-      redis:
-        condition: service_started
       rabbitmq:
         condition: service_started
       mysql:
         condition: service_healthy
-    #ports:
+      #ports:
       #- "127.0.0.1:5000:5000"
     expose:
       - "5000"
@@ -132,36 +130,36 @@ services:
       SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: "20s"
     deploy:
       mode: replicated
-      replicas: 1
+      replicas: 2
 
       # 1. Internal Healthcheck
     healthcheck:
-        test: [ "CMD", "curl", "-f", "http://localhost:5000/healthz" ]
-        interval: 10s
-        timeout: 5s
-        retries: 3
-        start_period: 30s
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/healthz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
       # 2. Traefik Configuration
     labels:
-        - "traefik.enable=true"
+      - "traefik.enable=true"
 
-        # Routing rule: Mọi request sẽ vào backend
-        - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
-        - "traefik.http.services.backend.loadbalancer.server.port=5000"
+      # Routing rule: Mọi request sẽ vào backend
+      - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
+      - "traefik.http.services.backend.loadbalancer.server.port=5000"
 
-        # Smart Health Check (Traefik routing logic)
-        - "traefik.http.services.backend.loadbalancer.healthcheck.path=/readyz"
-        - "traefik.http.services.backend.loadbalancer.healthcheck.interval=5s"
-        - "traefik.http.services.backend.loadbalancer.healthcheck.timeout=2s"
+      # Smart Health Check (Traefik routing logic)
+      - "traefik.http.services.backend.loadbalancer.healthcheck.path=/readyz"
+      - "traefik.http.services.backend.loadbalancer.healthcheck.interval=5s"
+      - "traefik.http.services.backend.loadbalancer.healthcheck.timeout=2s"
 
-        # Rate Limiting (200 req/s, burst 50)
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=200"
-        - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=50"
-        - "traefik.http.routers.backend.middlewares=backend-ratelimit"
+      # Rate Limiting (200 req/s, burst 50)
+      - "traefik.http.middlewares.backend-ratelimit.ratelimit.average=120"
+      - "traefik.http.middlewares.backend-ratelimit.ratelimit.burst=50"
+      - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
     cpus: 0.75
-    mem_limit: 800m
+    mem_limit: 600m
     pids_limit: 768
 
 volumes:
