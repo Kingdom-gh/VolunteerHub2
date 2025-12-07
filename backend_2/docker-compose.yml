@@ -164,8 +164,64 @@ services:
     mem_limit: 800m
     pids_limit: 768
 
+  telegraf:
+    image: telegraf:1.30.2
+    container_name: volunteerhub-telegraf
+    user: root # Vẫn giữ root
+    privileged: true # <--- THÊM DÒNG NÀY (Quan trọng nhất)
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      # Các biến môi trường này giúp Telegraf đọc thông số hệ thống thật (CPU/RAM host)
+      # thay vì chỉ đọc thông số của container Telegraf
+      HOST_ETC: /hostfs/etc
+      HOST_PROC: /hostfs/proc
+      HOST_SYS: /hostfs/sys
+      HOST_VAR: /hostfs/var
+      HOST_RUN: /hostfs/run
+      HOST_MOUNT_PREFIX: /hostfs
+    volumes:
+      - ./monitoring/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      # - /var/run/docker.sock:/var/run/docker.sock # Socket Docker
+      - /:/hostfs:ro # Mount ổ cứng host để đọc system metrics
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: volunteerhub-prometheus
+    restart: unless-stopped
+    depends_on:
+      - telegraf
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: volunteerhub-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+
 volumes:
   redis-data:
   rabbitmq-data:
   mysql-data:
   maven-repo:
+  prometheus-data:
+  grafana-data:
