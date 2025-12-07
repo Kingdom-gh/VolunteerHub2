@@ -16,7 +16,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import com.example.backend.exception.BadRequestException;
 // ResourceNotFoundException not needed after deferring post existence check to consumer
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import com.example.backend.exception.DownstreamServiceException;
 
@@ -66,13 +65,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         return -1L;
     }
 
-    @SuppressWarnings("unused")
-    private Long requestVolunteerFallback(JsonNode body, Volunteer currentVolunteer, Throwable ex) {
-        throw new DownstreamServiceException("Failed to enqueue volunteer request", ex);
-    }
-
     @Retry(name = "volunteerRequestService")
-    @CircuitBreaker(name = "volunteerRequestService", fallbackMethod = "getMyVolunteerRequestsFallback")
     @Bulkhead(name = "volunteerRequestService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(
         cacheNames = MY_REQUESTS_BY_EMAIL,
@@ -96,11 +89,6 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             }
             return dto;
         }).toList();
-    }
-
-    @SuppressWarnings("unused")
-    private List<VolunteerRequestDto> getMyVolunteerRequestsFallback(String email, Throwable ex) {
-        throw new DownstreamServiceException("Failed to load volunteer requests for " + email, ex);
     }
 
     @Override
