@@ -47,8 +47,8 @@ npm run dev
 ### 2. Rate limiting 
 - Rate limiting được cấu hình trực tiếp trên traefik, chặn các request spam
 #### **Cấu hình Rate Limit**
-- **Average limit:** 120 requests/second  
-- **Burst:** 50 requests  
+- **Average limit:** 200 requests/second  
+- **Burst:** 100 requests  
 - **Scope:** theo IP address  
 
 => Giảm thiệt hại từ DoS ở tầng Gateway, ngăn backend bị quá tải
