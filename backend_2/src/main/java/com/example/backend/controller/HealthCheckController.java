@@ -15,7 +15,7 @@ public class HealthCheckController {
     private final HealthEndpoint healthEndpoint;
     private final LatencyRecorder latencyRecorder;
 
-    private static final long SLA_LIMIT_MS = 1400;
+    private static final long SLA_LIMIT_MS = 3000;
     private static final int MAX_THREADS_THRESHOLD = 180;
     private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
 

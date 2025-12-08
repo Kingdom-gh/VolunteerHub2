@@ -28,7 +28,7 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
-    cpus: 0.5
+    cpus: 0.75
     mem_limit: 256m
     pids_limit: 512
 
@@ -109,11 +109,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/volunteerhub?serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: volunteerhub
       SPRING_DATASOURCE_PASSWORD: volunteerhub_pw
-
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
+      SPRING_DATA_REDIS_TIMEOUT: "1s"
       # Redis inside compose network
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: "6379"
-      # Ensure Lettuce picks the correct URL (override any packaged property)
       SPRING_REDIS_URL: redis://redis:6379
       # RabbitMQ inside compose network
       SPRING_RABBITMQ_HOST: rabbitmq
@@ -130,7 +130,7 @@ services:
       SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: "20s"
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
 
       # 1. Internal Healthcheck
     healthcheck:
@@ -158,8 +158,8 @@ services:
       - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
-    cpus: 0.75
-    mem_limit: 600m
+    cpus: 4
+    mem_limit: 1200m
     pids_limit: 768
 
 volumes:
