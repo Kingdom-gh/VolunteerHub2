@@ -26,7 +26,7 @@
 => Tăng tốc độ cho những truy vấn đọc hay được sử dụng, tăng bảo mật, chống SQL injection
 
 ### 4. Thêm logic UI, UX
-- Bổ sung thông báo tình trạng xử lý đăng ký người dùng, và số đăng ký mới đến người tạo post
+- Bổ sung thông báo kết quả đăng ký đến người dùng, và số đăng ký mới đến người tạo post
 - Cho người đăng bài kiểm duyệt đăng ký đến post
 - Cải hiệt logic duy nhất 1 đăng ký của 1 người dùng đến cùng 1 post
 
