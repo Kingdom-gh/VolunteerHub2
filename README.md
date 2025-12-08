@@ -86,8 +86,8 @@ Mới:
 
 ### 7. Redis cache
 - Nhiều truy vấn đọc đến database tốn tài nguyên vì phải thực hiện nhiều lần.
-- Tăng latency và tải trên DB khi traffic cao.
-- Lưu kết quả truy vấn vào Redis (in-memory) để trả ngay khi có cache-hit.
+- Giảm latency và tải trên DB khi traffic cao.
+- Lưu kết quả truy vấn vào Redis để trả ngay khi có cache-hit.
 
 => Cache trả nhanh hơn database
 
