@@ -67,6 +67,10 @@ Mới:
 
 => Cache trả nhanh hơn database
 
+![No Cache](./test_image/no_cache.jpg)
+
+![Cache Enabled](./test_image/cache.jpg)
+
 ### 8. Retry pattern
 - Lỗi tạm thời (transient DB error, timeout) khiến request thất bại ngay lập tức.
 
@@ -78,6 +82,8 @@ Mới:
 - Nếu không từ chối sớm, request sẽ xếp hàng đợi và làm giảm khả năng hệ thống hồi phục nhanh.
 
 => Dùng bulkhead semaphore để giới hạn số cuộc gọi đồng thời cho từng nghiệp vụ. Thay vì cho request chờ vô hạn hoặc chiếm tài nguyên, từ chối ngay với mã lỗi rõ ràng (429)
+
+![Bulkhead Demo](./test_image/bulkhead.jpg)
 
 ### 10. Giám sát hệ thống (Telegraf - Prometheus – Grafana)
 - Telegraf là collector gom system metrics (cpu, ram, disk,...) của container docker
