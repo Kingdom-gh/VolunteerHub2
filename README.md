@@ -11,24 +11,33 @@
 ## Các cải tiến
 ### 1. Traefik Load Balancer
 - Load Balancer tự động phân phối traffic đến các instance đang hoạt động tốt
-- Các instance liên tục được health check bằng cách gọi API healthz(kiểm tra instance còn sống) và readyz(kiểm tra kết nối đến database, redis, mq, ...) -> nếu không hoạt động -> Load Balancer loại instance ra khỏi danh sách các instance có thể nhận request
+- Các instance liên tục được health check bằng cách gọi API :
+    - healthz(kiểm tra instance còn sống) 
+    - readyz(kiểm tra kết nối đến database, redis, mq, ...) 
 
-=> Horizontal scaling, tăng khả năng chịu lỗi
+-> nếu không hoạt động -> Load Balancer loại instance ra khỏi danh sách các instance có thể nhận request
+
+=> Horizontal scaling, tăng khả năng chịu lỗi, phục hồi
 ### 2. Rate limiting 
 - Rate limiting được cấu hình trực tiếp trên traefik, chặn các request spam
 #### **Cấu hình Rate Limit**
 - **Average limit:** 200 requests/second  
 - **Burst:** 50 requests  
 - **Scope:** theo IP address  
-=> Chống DoS ở tầng ứng dụng, ngăn backend bị quá tải
+=> Giảm thiệt hại từ DoS ở tầng Gateway, ngăn backend bị quá tải
 ### 3. Thêm ORM, index cho DB
 
-=> Tăng tốc độ cho những truy vấn đọc hay được sử dụng, tăng bảo mật, chống SQL injection
+Cũ: Sử dụng truy vấn SQL với PrepareStatement
+Mới:
+- Thay thế truy vấn SQL thuần bằng ORM (Hibernate/Jpa)
+- Index cho các bảng có lượng truy vấn hay sắp xếp cao
+=> Tăng tốc độ cho những truy vấn đọc hay được sử dụng, tăng bảo mật, chống SQL injection, độc lập cơ sở dữ liệu
 
 ### 4. Thêm logic UI, UX
 - Bổ sung thông báo kết quả đăng ký đến người dùng, và số đăng ký mới đến người tạo post
 - Cho người đăng bài kiểm duyệt đăng ký đến post
 - Cải hiệt logic duy nhất 1 đăng ký của 1 người dùng đến cùng 1 post
+- Thêm hình ảnh mặc định theo category cho post không có ảnh
 
 => Logic nhất quán, tránh rác cơ sở dữ liệu, cải thiện trải nghiệm người dùng
 
@@ -63,6 +72,15 @@
 - Nếu không từ chối sớm, request sẽ xếp hàng đợi và làm giảm khả năng hệ thống hồi phục nhanh.
 
 => Dùng bulkhead semaphore để giới hạn số cuộc gọi đồng thời cho từng nghiệp vụ. Thay vì cho request chờ vô hạn hoặc chiếm tài nguyên, từ chối ngay với mã lỗi rõ ràng (429)
+
+### 10. Giám sát hệ thống (Telegraf - Prometheus – Grafana)
+- Telegraf là collector gom system metrics (cpu, ram, disk,...) của container docker
+- Prometheus thu thập và lưu trữ metrics từ backend, telegraf
+- Grafana lấy nguồn dữ liệu từ Prometheus và trực quan hóa thông qua các bảng, biểu đồ,...
+
+=> Cải thiện Observability, dễ theo dõi tình trạng toàn hệ thống theo thời gian gần thực.
+=> Giảm thời gian phát hiện lỗi, debug
+
 
 ## Cài đặt và chạy dự án
 ```bash
