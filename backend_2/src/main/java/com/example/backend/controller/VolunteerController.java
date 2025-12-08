@@ -92,8 +92,8 @@ public class VolunteerController {
   @GetMapping("/need-volunteers")
   public Page<VolunteerPostDto> getAllVolunteers(
       @RequestParam(required = false) String search,
-      @PageableDefault(size = 15) Pageable pageable) {
-    // Bỏ qua tham số size từ client, luôn cố định size=15
+      @PageableDefault(size = 6) Pageable pageable) {
+    // Bỏ qua tham số size từ client, luôn cố định size=6
     Pageable effective = PageRequest.of(pageable.getPageNumber(), 15);
     return postService.getAllVolunteers(search, effective);
   }
