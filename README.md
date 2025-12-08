@@ -1,12 +1,15 @@
 # VolunteerHub2 - (Improved version)
 - Bài tập lớn môn Kiến trúc phần mềm
 - Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
+- Bản gốc sau chỉnh sửa (để so sánh): https://github.com/Kingdom-gh/VolunteerHub2/tree/checkpoint
+
 ## Nhóm 15:
 - **Đỗ Đức Thắng ** - 23020158
 - **Đỗ Trung Kiên ** - 23020085
 - **Lương Vũ Thế ** - 23020159
 - **Đầu Hồng Quang ** - 23020135
 ## Chức năng chính của bản gốc:
+- Đăng ký / Đăng nhập sử dụng Authentication từ Firebase
 - Quản lí sự kiện tình nguyện, tình nguyện viên
 ## Các cải tiến
 ### 1. Traefik Load Balancer
@@ -24,6 +27,7 @@
 - **Average limit:** 200 requests/second  
 - **Burst:** 50 requests  
 - **Scope:** theo IP address  
+
 => Giảm thiệt hại từ DoS ở tầng Gateway, ngăn backend bị quá tải
 ### 3. Thêm ORM, index cho DB
 
@@ -31,6 +35,7 @@ Cũ: Sử dụng truy vấn SQL với PrepareStatement
 Mới:
 - Thay thế truy vấn SQL thuần bằng ORM (Hibernate/Jpa)
 - Index cho các bảng có lượng truy vấn hay sắp xếp cao
+
 => Tăng tốc độ cho những truy vấn đọc hay được sử dụng, tăng bảo mật, chống SQL injection, độc lập cơ sở dữ liệu
 
 ### 4. Thêm logic UI, UX
@@ -53,6 +58,7 @@ Mới:
 - Dùng idempotency  để ghi nhận duy nhất 1 request được tạo bời người dùng
 
 => Cải thiện tính toàn vẹn dữ liệu khi lượng lớn người dùng đồng thời đăng ký/ xóa đăng ký
+
 => Retry 3 lần vào database, lần 1 là 0s, lần 2 là sau 5s, lần 3 là sau 30s
 ### 7. Redis cache
 - Nhiều truy vấn đọc đến database tốn tài nguyên vì phải thực hiện nhiều lần.
@@ -85,14 +91,16 @@ Mới:
 ## Cài đặt và chạy dự án
 ```bash
 # Clone
-git clone <repo-link>
+git clone <this-repo-link>
 
 # Chạy backend
-cd back_end2
-mvn spring-boot:run
-
+# Cần chạy docker engine
+cd backend_2
+docker compose build
+docker compose up -d
 
 # Chạy client
 cd client-side
 npm install
 npm run dev
+```
