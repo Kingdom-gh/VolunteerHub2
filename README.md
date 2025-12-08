@@ -52,7 +52,7 @@ Mới:
  
 => Tránh lỗi OOM và giúp người dùng không cần chờ tất cả dữ liệu,
 
-### 6. Thêm RabbitMQ xử lý bất đồng bộ request đăng ký/ xóa đăng ký
+### 6. Thêm RabbitMQ xử lý bất đồng bộ request
 - Tách thao tác xử lý nặng (như gửi thông báo, lưu cơ sở dữ liệu) được xử lý sau
 - Dùng unique constraint để đảm bảo 1 bảng duy nhất 1 cặp gmail và postId
 - Dùng idempotency  để ghi nhận duy nhất 1 request được tạo bời người dùng
