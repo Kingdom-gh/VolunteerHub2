@@ -158,8 +158,8 @@ services:
       - "traefik.http.routers.backend.middlewares=backend-ratelimit"
     restart: unless-stopped
     # Resource limits for local machine (leave CPU/RAM for JMeter and OS)
-    cpus: 4
-    mem_limit: 1200m
+    cpus: 3
+    mem_limit: 2g
     pids_limit: 768
 
 volumes:
