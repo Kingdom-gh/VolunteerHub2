@@ -1,16 +1,39 @@
-# VolunteerHub2 - (Improved version)
-- Bài tập lớn môn Kiến trúc phần mềm
+
+# VolunteerHub2
+- Bài tập lớn môn Kiến trúc phần mềm INT3105
 - Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
 - Bản gốc sau chỉnh sửa (để so sánh): https://github.com/Kingdom-gh/VolunteerHub2/tree/checkpoint
 
 ## Nhóm 15:
-- **Đỗ Đức Thắng ** - 23020158
-- **Đỗ Trung Kiên ** - 23020085
-- **Lương Vũ Thế ** - 23020159
-- **Đầu Hồng Quang ** - 23020135
-## Chức năng chính của bản gốc:
-- Đăng ký / Đăng nhập sử dụng Authentication từ Firebase
-- Quản lí sự kiện tình nguyện, tình nguyện viên
+- **Đỗ Đức Thắng** - 23020158
+- **Đỗ Trung Kiên** - 23020085
+- **Lương Vũ Thế** - 23020159
+- **Đầu Hồng Quang** - 23020135
+## Chức năng của bản gốc:
+- Đăng ký - Đăng nhập sử dụng xác thực từ Firebase
+- Thêm, sửa, xóa sự kiện
+- Đăng ký sự kiện
+- Xem thông tin sự kiện
+
+## Cài đặt và chạy dự án
+```bash
+# Clone
+git clone <this-repo-link>
+
+# Chạy backend
+# Cần chạy docker engine, và cần setup cho vài container
+cd backend_2
+docker compose build
+docker compose up -d
+
+# Chạy client
+# Tạo file .env và thêm các biến môi trường Firebase
+cd client-side
+npm install
+npm run dev
+```
+
+
 ## Các cải tiến
 ### 1. Traefik Load Balancer
 - Load Balancer tự động phân phối traffic đến các instance đang hoạt động tốt
@@ -32,6 +55,7 @@
 ### 3. Thêm ORM, index cho DB
 
 Cũ: Sử dụng truy vấn SQL với PrepareStatement
+
 Mới:
 - Thay thế truy vấn SQL thuần bằng ORM (Hibernate/Jpa)
 - Index cho các bảng có lượng truy vấn hay sắp xếp cao
@@ -41,8 +65,8 @@ Mới:
 ### 4. Thêm logic UI, UX
 - Bổ sung thông báo kết quả đăng ký đến người dùng, và số đăng ký mới đến người tạo post
 - Cho người đăng bài kiểm duyệt đăng ký đến post
-- Cải hiệt logic duy nhất 1 đăng ký của 1 người dùng đến cùng 1 post
-- Thêm hình ảnh mặc định theo category cho post không có ảnh
+- Cải thiện logic duy nhất 1 đăng ký của 1 người dùng đến cùng 1 post
+- Thêm hình ảnh mặc định sinh động theo category cho post không có ảnh
 
 => Logic nhất quán, tránh rác cơ sở dữ liệu, cải thiện trải nghiệm người dùng
 
@@ -93,20 +117,5 @@ Mới:
 => Cải thiện Observability, dễ theo dõi tình trạng toàn hệ thống theo thời gian gần thực.
 => Giảm thời gian phát hiện lỗi, debug
 
+<img width="1311" height="545" alt="image" src="https://github.com/user-attachments/assets/15c69169-7106-42c8-8afb-d1e0e9586dc9" />
 
-## Cài đặt và chạy dự án
-```bash
-# Clone
-git clone <this-repo-link>
-
-# Chạy backend
-# Cần chạy docker engine
-cd backend_2
-docker compose build
-docker compose up -d
-
-# Chạy client
-cd client-side
-npm install
-npm run dev
-```
