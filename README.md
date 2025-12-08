@@ -1,3 +1,4 @@
+
 # VolunteerHub2 - (Improved version)
 - Bài tập lớn môn Kiến trúc phần mềm
 - Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
@@ -93,6 +94,7 @@ Mới:
 => Cải thiện Observability, dễ theo dõi tình trạng toàn hệ thống theo thời gian gần thực.
 => Giảm thời gian phát hiện lỗi, debug
 
+<img width="750" height="312" alt="image" src="https://github.com/user-attachments/assets/6bd9bfdb-cbe9-446e-b097-eed37995d34d" />
 
 ## Cài đặt và chạy dự án
 ```bash
