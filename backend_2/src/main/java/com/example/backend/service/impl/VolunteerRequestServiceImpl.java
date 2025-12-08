@@ -73,7 +73,7 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
     @Cacheable(
         cacheNames = MY_REQUESTS_BY_EMAIL,
         key = "#email.toLowerCase() + ':' + (#postId != null ? #postId : 'all') + ':p:' + #pageable.pageNumber",
-        sync = true
+        unless = "#result == null || #result.isEmpty()"
     )
     public Page<VolunteerRequestDto> getMyVolunteerRequests(String email, Long postId, Pageable pageable) {
         if (email == null || email.isBlank()) {

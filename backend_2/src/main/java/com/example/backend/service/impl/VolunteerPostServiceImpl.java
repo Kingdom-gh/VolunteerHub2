@@ -52,7 +52,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Override
     @Retry(name = "volunteerPostService")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
-    @Cacheable(cacheNames = HOME_TOP6, key = "'top6'", sync = true)
+    @Cacheable(cacheNames = HOME_TOP6, key = "'top6'",
+        unless = "#result == null || #result.isEmpty()")
     public List<VolunteerPostDto> getLatestVolunteers() {
         List<VolunteerPost> posts = postRepository.findTop6ByOrderByDeadlineAsc();
         return posts.stream()
@@ -65,7 +66,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = POSTS,
         key = "'q:' + (#search == null ? '' : #search.trim().toLowerCase()) + ':p:' + #pageable.pageNumber",
-        sync = true)
+        unless = "#result == null || #result.isEmpty()")
     public Page<VolunteerPostDto> getAllVolunteers(String search, Pageable pageable) {
         Page<VolunteerPost> page;
         if (search != null && !search.isBlank()) {
@@ -79,7 +80,7 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Override
     @Retry(name = "volunteerPostService")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
-    @Cacheable(cacheNames = POST_BY_ID, sync = true)
+    @Cacheable(cacheNames = POST_BY_ID, key = "#id", unless = "#result == null")
     public VolunteerPostDto getVolunteerPostDetails(Long id) {
         return postRepository.findById(id)
             .map(this::toDto)
@@ -90,18 +91,21 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Transactional
     @CacheEvict(cacheNames = {POSTS, HOME_TOP6}, allEntries = true) // danh sách & top6 bẩn → xóa hết
     public Long addVolunteerPost(VolunteerPost post) {
-        post.setId(null);
+        post.setId(null); // ✅ Ép insert
 
         if (post.getPostTitle() == null || post.getPostTitle().isBlank()) {
             throw new BadRequestException("postTitle is required");
         }
 
+        // Nếu chọn Cách A (cho phép client gửi orgEmail), giữ check này:
+        // Nếu chọn Cách B (lấy từ principal ở controller), bỏ check này đi.
         if (post.getOrgEmail() == null || post.getOrgEmail().isBlank()) {
           throw new BadRequestException("orgEmail is required");
         } else {
            post.setOrgEmail(post.getOrgEmail().trim());
         }
 
+    // ✅ Bù mặc định để tránh NOT NULL
         if (post.getNoOfVolunteer() == null) post.setNoOfVolunteer(0);
         var saved = postRepository.saveAndFlush(post);
         return saved.getId();
@@ -148,7 +152,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Override
     @Retry(name = "volunteerPostService")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
-    @Cacheable(cacheNames = MY_POSTS_BY_EMAIL, key = "#email", sync = true)
+    @Cacheable(cacheNames = MY_POSTS_BY_EMAIL, key = "#email",
+        unless = "#result == null || #result.isEmpty()")
     public List<VolunteerPostDto> getMyVolunteerPosts(String email) {
         List<VolunteerPost> posts = postRepository.findByOrgEmail(email);
         return posts.stream()
@@ -160,7 +165,8 @@ public class VolunteerPostServiceImpl implements VolunteerPostService {
     @Retry(name = "volunteerPostService")
     @Bulkhead(name = "volunteerPostService", type = Bulkhead.Type.SEMAPHORE)
     @Cacheable(cacheNames = MY_POSTS_BY_EMAIL,
-        key = "#email + ':p:' + #pageable.pageNumber", sync = true)
+        key = "#email + ':p:' + #pageable.pageNumber",
+        unless = "#result == null || #result.isEmpty()")
     public Page<VolunteerPostDto> getMyVolunteerPosts(String email, Pageable pageable) {
         Page<VolunteerPost> page = postRepository.findByOrgEmail(email, pageable);
         return page.map(this::toDto);
