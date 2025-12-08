@@ -56,10 +56,10 @@ Mới:
 - Tách thao tác xử lý nặng (như gửi thông báo, lưu cơ sở dữ liệu) được xử lý sau
 - Dùng unique constraint để đảm bảo 1 bảng duy nhất 1 cặp gmail và postId
 - Dùng idempotency  để ghi nhận duy nhất 1 request được tạo bời người dùng
+- Kết hợp hai cơ chế retry, retry ngay tại ứng dụng (fast attempts) và retry có delay do broker (TTL + dead-letter) để giảm tải và thử lại sau khoảng thời gian.
 
-=> Cải thiện tính toàn vẹn dữ liệu khi lượng lớn người dùng đồng thời đăng ký/ xóa đăng ký
+=> Tăng độ tin cậy, bảo vệ dữ liệu đăng ký và tránh tải đột ngột.
 
-=> Retry 3 lần vào database, lần 1 là 0s, lần 2 là sau 5s, lần 3 là sau 30s
 ### 7. Redis cache
 - Nhiều truy vấn đọc đến database tốn tài nguyên vì phải thực hiện nhiều lần.
 - Tăng latency và tải trên DB khi traffic cao.
