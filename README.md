@@ -94,7 +94,8 @@ Mới:
 => Cải thiện Observability, dễ theo dõi tình trạng toàn hệ thống theo thời gian gần thực.
 => Giảm thời gian phát hiện lỗi, debug
 
-<img width="750" height="312" alt="image" src="https://github.com/user-attachments/assets/6bd9bfdb-cbe9-446e-b097-eed37995d34d" />
+<img width="1311" height="545" alt="image" src="https://github.com/user-attachments/assets/15c69169-7106-42c8-8afb-d1e0e9586dc9" />
+
 
 ## Cài đặt và chạy dự án
 ```bash
