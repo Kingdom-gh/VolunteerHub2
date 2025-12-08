@@ -45,6 +45,24 @@
 
 => Cải thiện tính toàn vẹn dữ liệu khi lượng lớn người dùng đồng thời đăng ký/ xóa đăng ký
 => Retry 3 lần vào database, lần 1 là 0s, lần 2 là sau 5s, lần 3 là sau 30s
+### 7. Redis cache
+- Nhiều truy vấn đọc đến database tốn tài nguyên vì phải thực hiện nhiều lần.
+- Tăng latency và tải trên DB khi traffic cao.
+- Lưu kết quả truy vấn vào Redis (in-memory) để trả ngay khi có cache-hit.
+
+=> Cache trả nhanh hơn database
+
+### 8. Retry pattern
+- Lỗi tạm thời (transient DB error, timeout) khiến request thất bại ngay lập tức.
+
+=> Tăng tỉ lệ thành công cho lỗi tạm thời, nhiều thao tác sẽ thành công nếu thử lại.
+
+### 9. Bulkhead pattern
+- Một loại tác vụ có thể chiếm hết thread pool khiến các request khác trong cùng service không thể xử lý được.
+- Khi một luồng nghiệp vụ bị quá tải, nó kéo theo các luồng khác làm tăng latency/timeout trên toàn hệ thống.
+- Nếu không từ chối sớm, request sẽ xếp hàng đợi và làm giảm khả năng hệ thống hồi phục nhanh.
+
+=> Dùng bulkhead semaphore để giới hạn số cuộc gọi đồng thời cho từng nghiệp vụ. Thay vì cho request chờ vô hạn hoặc chiếm tài nguyên, từ chối ngay với mã lỗi rõ ràng (429)
 
 ## Cài đặt và chạy dự án
 ```bash
