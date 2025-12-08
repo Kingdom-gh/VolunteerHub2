@@ -15,6 +15,25 @@
 - Đăng ký sự kiện
 - Xem thông tin sự kiện
 
+## Cài đặt và chạy dự án
+```bash
+# Clone
+git clone <this-repo-link>
+
+# Chạy backend
+# Cần chạy docker engine, và cần setup cho vài container
+cd backend_2
+docker compose build
+docker compose up -d
+
+# Chạy client
+# Tạo file .env và thêm các biến môi trường Firebase
+cd client-side
+npm install
+npm run dev
+```
+
+
 ## Các cải tiến
 ### 1. Traefik Load Balancer
 - Load Balancer tự động phân phối traffic đến các instance đang hoạt động tốt
@@ -100,21 +119,3 @@ Mới:
 
 <img width="1311" height="545" alt="image" src="https://github.com/user-attachments/assets/15c69169-7106-42c8-8afb-d1e0e9586dc9" />
 
-
-## Cài đặt và chạy dự án
-```bash
-# Clone
-git clone <this-repo-link>
-
-# Chạy backend
-# Cần chạy docker engine
-cd backend_2
-docker compose build
-docker compose up -d
-
-# Chạy client
-# Tạo file .env và thêm các biến môi trường Firebase
-cd client-side
-npm install
-npm run dev
-```
