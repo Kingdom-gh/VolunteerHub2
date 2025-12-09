@@ -2,7 +2,6 @@
 # VolunteerHub2
 - Bài tập lớn môn Kiến trúc phần mềm INT3105
 - Bản gốc: https://github.com/nahidbinwadood/Volunteer-Management-System
-- Bản gốc sau chỉnh sửa (để so sánh): https://github.com/Kingdom-gh/VolunteerHub2/tree/checkpoint
 
 ## Nhóm 15:
 - **Đỗ Đức Thắng** - 23020158
