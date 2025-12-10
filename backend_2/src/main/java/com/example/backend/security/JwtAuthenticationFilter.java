@@ -38,21 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (token != null) {
       System.out.println("DEBUG JWT: Token found in Cookie: " + token.substring(0, 10) + "..."); // 
       try {
-        // 2. Xác thực và trích xuất email
         String userEmail = jwtService.extractUsername(token);
         System.out.println("DEBUG JWT: Extracted Email: " + userEmail); 
-        // 3. Nếu token hợp lệ và chưa được xác thực
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-          // Do ứng dụng chỉ sử dụng email làm định danh, chúng ta tạo UserDetails giả
-          // Trong ứng dụng thực tế, bạn sẽ load UserDetails từ Database
-//          UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
-
+          UserDetails userDetails = new User(userEmail, "", Collections.emptyList());
           Volunteer volunteerDetails = volunteerRepository.findByVolunteerEmail(userEmail).orElseThrow();
           if (volunteerDetails != null) {
             System.out.println("DEBUG JWT: Volunteer Entity loaded successfully: " + volunteerDetails.getVolunteerEmail()); 
 
-            // 4. Tạo đối tượng Authentication
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     volunteerDetails, 
                     null,
