@@ -30,7 +30,6 @@ public class RedisCacheConfig {
   @Bean
   public CacheManager cacheManager(RedisConnectionFactory cf) {
 
-    // Dùng JDK serialization, không dùng JSON nữa
     JdkSerializationRedisSerializer valueSerializer = new JdkSerializationRedisSerializer();
 
     RedisCacheConfiguration defaultCfg = RedisCacheConfiguration
