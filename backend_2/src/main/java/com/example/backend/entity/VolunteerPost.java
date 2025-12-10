@@ -53,9 +53,4 @@ public class VolunteerPost implements Serializable {
 
   @OneToMany(mappedBy = "volunteerPost", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<VolunteerRequest> requests;
-//  // THÊM: Thiết lập quan hệ One-to-Many với VolunteerRequest
-//  // mappedBy chỉ ra tên trường trong entity VolunteerRequest chứa khóa ngoại
-//  // CascadeType.ALL: khi xóa post, tất cả requests liên quan cũng bị xóa.
-//  @OneToMany(mappedBy = "volunteerPost", cascade = CascadeType.ALL, orphanRemoval = true)
-//  private List<VolunteerRequest> requests;
 }
