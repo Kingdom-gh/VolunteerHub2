@@ -7,7 +7,7 @@ import java.io.Serializable;
 @Data
 public class VolunteerRequestDto implements Serializable {
   private static final long serialVersionUID = 1L;
-  private Long id;              // ID của VolunteerRequest (cho hành động Hủy)
+  private Long id;              // ID của VolunteerRequest
   private Long postId;          // ID của VolunteerPost
   private String postTitle;     // From VolunteerPost
   private String orgEmail;      // Từ VolunteerPost
@@ -15,5 +15,5 @@ public class VolunteerRequestDto implements Serializable {
   private String location;      // Từ VolunteerPost
   private String category;      // Từ VolunteerPost
   private String status;        // Từ VolunteerRequest
-  private String volunteerEmail; // Từ Volunteer (để gửi về client)
+  private String volunteerEmail; // Từ Volunteer
 }
