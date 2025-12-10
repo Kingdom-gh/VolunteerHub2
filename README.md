@@ -88,7 +88,6 @@ Mới:
 - Giảm latency và tải trên DB khi traffic cao.
 - Lưu kết quả truy vấn vào Redis để trả ngay khi có cache-hit.
 
-=> Cache trả nhanh hơn database
 
 ![No Cache](./test_image/no_cache.jpg)
 
