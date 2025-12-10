@@ -22,16 +22,13 @@ public class VolunteerRequest implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // ⭐️ THAY THẾ: postId (Long) bằng Entity VolunteerPost
   // Many-to-One tới Bài đăng
   @ManyToOne(fetch = FetchType.LAZY) // Tải dữ liệu bài đăng khi cần
   @JoinColumn(name = "postId", nullable = false) // Tên cột khóa ngoại trong DB
   @JsonIgnore
   private VolunteerPost volunteerPost;
 
-  // ⭐️ THAY THẾ: volunteerEmail (String) bằng Entity AppUser
   // Many-to-One tới Người dùng/Tình nguyện viên
-  // Giả sử tên Entity User của bạn là AppUser
   @ManyToOne(fetch = FetchType.LAZY) // Tải dữ liệu user khi cần
   @JoinColumn(name = "volunteerEmail", nullable = false) // Tên cột khóa ngoại trong DB
   @JsonIgnore

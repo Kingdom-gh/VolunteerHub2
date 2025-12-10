@@ -34,22 +34,17 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class VolunteerController {
 
-  // Giữ lại VolunteerRepository cho 2 endpoint JWT (thêm user nếu chưa có)
   private final VolunteerRepository volunteerRepository;
 
-  // JWT service giữ nguyên
   private final JwtService jwtService;
 
-  // ✅ Thêm Service layer
   private final VolunteerPostService postService;
   private final VolunteerRequestService requestService;
 
   private final VolunteerRequestRepository requestRepository;
   private final NotificationService notificationService;
 
-  // mail sending removed per request; notifications persisted to DB only
 
-  // --- JWT/AUTH ENDPOINTS ---
   @PostMapping("/jwt")
   public ResponseEntity<?> createJwt(@RequestBody Map<String, String> user, HttpServletResponse response) {
     String email = user.get("email");
@@ -57,7 +52,6 @@ public class VolunteerController {
       return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
     }
 
-    // Thêm user vào DB nếu chưa có (giữ nguyên logic cũ)
     Optional<Volunteer> existingVolunteer = volunteerRepository.findByVolunteerEmail(email);
     if (existingVolunteer.isEmpty()) {
       Volunteer newVolunteer = new Volunteer();
@@ -65,7 +59,6 @@ public class VolunteerController {
       volunteerRepository.save(newVolunteer);
     }
 
-    // Tạo JWT
     String token = jwtService.generateToken(email);
     // Set-Cookie: token=...; HttpOnly; Path=/; SameSite=None
     response.addHeader("Set-Cookie", jwtService.createCookieHeader("token", token, true));
@@ -75,7 +68,6 @@ public class VolunteerController {
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout(HttpServletResponse response) {
-    // Xoá cookie
     response.addHeader("Set-Cookie", jwtService.createCookieHeader("token", "", false, 0));
     return ResponseEntity.ok(Map.of("success", true));
   }
@@ -120,7 +112,6 @@ public ResponseEntity<?> addVolunteerPost(@RequestBody VolunteerPost post,
     }
     post.setOrgEmail(email); // lấy từ principal
   } else {
-    // ✅ Nếu không login, buộc body phải có orgEmail
     if (post.getOrgEmail() == null || post.getOrgEmail().isBlank()) {
       return ResponseEntity.badRequest()
           .body(Map.of("message", "orgEmail is required (login or include in body)"));
@@ -330,12 +321,10 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
   // Huỷ yêu cầu
   @DeleteMapping("/my-volunteer-request/{id}")
   public ResponseEntity<?> removeVolunteerRequest(@PathVariable Long id) {
-    // 1) Kiểm tra tồn tại trực tiếp bằng repository (nhanh & chính xác)
     if (!requestRepository.existsById(id)) {
       return ResponseEntity.notFound().build();
     }
 
-    // 2) Gọi service xoá (service hiện là void và đã @CacheEvict)
     requestService.removeVolunteerRequest(id);
 
     // 3) Trả kết quả OK
