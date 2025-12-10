@@ -85,7 +85,6 @@ public class VolunteerController {
   public Page<VolunteerPostDto> getAllVolunteers(
       @RequestParam(required = false) String search,
       @PageableDefault(size = 6) Pageable pageable) {
-    // Bỏ qua tham số size từ client, luôn cố định size=6
     Pageable effective = PageRequest.of(pageable.getPageNumber(), 15);
     return postService.getAllVolunteers(search, effective);
   }
@@ -181,8 +180,6 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
         .body("User must be authenticated to submit a request.");
   }
 
-  // Use the authentication principal only (do not synchronously look up user in DB here)
-  // Consumer will decide whether the volunteer record exists or not.
   String email = currentVolunteer.getVolunteerEmail();
   if (email == null || email.isBlank()) {
     email = currentVolunteer.getUsername();
@@ -318,7 +315,6 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
     });
   }
 
-  // Huỷ yêu cầu
   @DeleteMapping("/my-volunteer-request/{id}")
   public ResponseEntity<?> removeVolunteerRequest(@PathVariable Long id) {
     if (!requestRepository.existsById(id)) {
@@ -327,7 +323,6 @@ public ResponseEntity<?> requestVolunteer(@RequestBody JsonNode body,
 
     requestService.removeVolunteerRequest(id);
 
-    // 3) Trả kết quả OK
     return ResponseEntity.ok(Map.of("success", true));
   }
 
