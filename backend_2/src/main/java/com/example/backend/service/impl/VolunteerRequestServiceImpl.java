@@ -34,7 +34,6 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
     private final VolunteerRequestRepository requestRepository;
     private final VolunteerRequestPublisher requestPublisher;
 
-    // Async publish only (no direct DB write). Returns -1L to indicate async accepted.
     public Long requestVolunteer(JsonNode body, Volunteer currentVolunteer) {
         if (currentVolunteer == null) {
             throw new IllegalStateException("Unauthorized: missing volunteer principal");
@@ -53,8 +52,6 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             throw new BadRequestException("'volunteerPost.id' must be a positive number");
         }
         
-        // Defer post existence verification to the consumer to make publish fast.
-        // Publish message (contains only postId + volunteer email + suggestion)
         String idempotentKey = currentVolunteer.getVolunteerEmail() + ":" + postId;
         VolunteerRequestMessage msg = new VolunteerRequestMessage(postId,
             currentVolunteer.getVolunteerEmail(),
@@ -63,7 +60,6 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
             idempotentKey);
         requestPublisher.publish(msg);
 
-        // Async: cannot return generated DB id now -> use sentinel
         return -1L;
     }
 
@@ -120,7 +116,6 @@ public class VolunteerRequestServiceImpl implements VolunteerRequestService {
         if (id == null || id <= 0) {
             return;
         }
-        // Publish delete message; validation and deletion happen in consumer
         com.example.backend.messaging.DeleteVolunteerRequestMessage msg =
                 new com.example.backend.messaging.DeleteVolunteerRequestMessage(id, java.time.Instant.now());
         requestPublisher.publishDelete(msg);
