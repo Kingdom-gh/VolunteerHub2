@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 import java.util.Arrays;
 
@@ -22,6 +23,13 @@ import java.util.Arrays;
 public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthFilter;
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> tenantFilterRegistration(JwtAuthenticationFilter filter) {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false); // Quan trọng: Tắt đăng ký tự động
+        return registration;
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
