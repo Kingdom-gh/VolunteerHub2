@@ -9,8 +9,8 @@ import java.util.List;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "volunteer_post") // Tên bảng trong MySQL là volunteers
-@Data // Tự động tạo getters, setters, toString, equals, hashCode (Lombok)
+@Table(name = "volunteer_post")
+@Data
 public class VolunteerPost implements Serializable {
 
   private static final long serialVersionUID = 1L;
