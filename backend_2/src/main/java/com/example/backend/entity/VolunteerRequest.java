@@ -12,7 +12,7 @@ import java.io.Serializable;
 @Table(
   name = "volunteer_request",
   uniqueConstraints = @UniqueConstraint(columnNames = {"volunteerEmail", "postId"})
-) // Bảng mới cho Request + Unique(user,post)
+) 
 @Data
 public class VolunteerRequest implements Serializable {
 
@@ -22,13 +22,11 @@ public class VolunteerRequest implements Serializable {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // Many-to-One tới Bài đăng
   @ManyToOne(fetch = FetchType.LAZY) // Tải dữ liệu bài đăng khi cần
   @JoinColumn(name = "postId", nullable = false) // Tên cột khóa ngoại trong DB
   @JsonIgnore
   private VolunteerPost volunteerPost;
 
-  // Many-to-One tới Người dùng/Tình nguyện viên
   @ManyToOne(fetch = FetchType.LAZY) // Tải dữ liệu user khi cần
   @JoinColumn(name = "volunteerEmail", nullable = false) // Tên cột khóa ngoại trong DB
   @JsonIgnore
